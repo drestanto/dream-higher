@@ -43,8 +43,17 @@ The star feature! An annoying Indonesian shopkeeper AI that:
 - **Styling:** Tailwind CSS 4
 - **State:** Zustand
 - **Charts:** Chart.js + react-chartjs-2
-- **Scanner:** html5-qrcode
 - **Icons:** Lucide React
+
+### Barcode Scanning
+| Mode | Technology | Description |
+|------|------------|-------------|
+| Live Camera | `barcode-detector` (ponyfill) | Real-time scanning via browser camera using ZXing-based polyfill |
+| Image Upload | `zxing-wasm` (backend) | Upload photo to backend for processing, more reliable for small/blurry barcodes |
+
+**Supported formats:** EAN-13, EAN-8, UPC-A, UPC-E, Code-128, Code-39, Code-93, ITF, QR Code
+
+**Note:** Live camera scanning depends on camera quality. For small barcodes or low-res cameras, use the "Upload Foto" feature.
 
 ### AI Services
 | Feature | Provider | API |
@@ -126,7 +135,7 @@ dream-higher/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Layout.jsx           # 3-panel layout
-│   │   │   ├── BarcodeScanner.jsx   # html5-qrcode wrapper
+│   │   │   ├── BarcodeScanner.jsx   # barcode-detector + upload
 │   │   │   ├── TransactionPanel.jsx # Right panel
 │   │   │   ├── KepoPopup.jsx        # AI guess popup
 │   │   │   └── Receipt.jsx          # Print receipt
@@ -161,6 +170,7 @@ dream-higher/
 |--------|----------|-------------|
 | GET | `/api/products` | List all products |
 | GET | `/api/products/barcode/:code` | Get by barcode |
+| POST | `/api/products/scan-image` | Scan barcode from base64 image (zxing-wasm) |
 | POST | `/api/products` | Create product |
 | PATCH | `/api/products/:id` | Update product |
 | DELETE | `/api/products/:id` | Delete product |

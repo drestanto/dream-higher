@@ -1,7 +1,45 @@
 import { Router } from 'express';
 import { prisma } from '../index.js';
+import { readBarcodes } from 'zxing-wasm';
 
 const router = Router();
+
+// Scan barcode from base64 image
+router.post('/scan-image', async (req, res) => {
+  try {
+    const { image } = req.body; // base64 image data
+
+    if (!image) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    // Remove data URL prefix if present
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+    const blob = new Blob([imageBuffer], { type: 'image/jpeg' });
+
+    const results = await readBarcodes(blob, {
+      tryHarder: true,
+      formats: ['EAN-13', 'EAN-8', 'UPC-A', 'UPC-E', 'Code128', 'Code39', 'QRCode'],
+      maxNumberOfSymbols: 5,
+    });
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'No barcode detected in image' });
+    }
+
+    // Return all detected barcodes
+    const barcodes = results.map(r => ({
+      format: r.format,
+      value: r.text,
+    }));
+
+    res.json({ barcodes });
+  } catch (error) {
+    console.error('Error scanning barcode from image:', error);
+    res.status(500).json({ error: 'Failed to scan barcode' });
+  }
+});
 
 // Get all products
 router.get('/', async (req, res) => {
