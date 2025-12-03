@@ -107,7 +107,10 @@ router.post('/:id/items', async (req, res) => {
     }
 
     if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+      const scannedId = barcode || productId;
+      return res.status(404).json({
+        error: `Barang ID:${scannedId} tidak ditemukan, bukan punya warung/toko`
+      });
     }
 
     // Get transaction to determine price
