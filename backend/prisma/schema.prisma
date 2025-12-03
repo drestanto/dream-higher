@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id                 String   @id @default(uuid())
+  barcode            String   @unique
+  name               String
+  buyPrice           Int      @map("buy_price")
+  sellPrice          Int      @map("sell_price")
+  stock              Int      @default(0)
+  category           String
+  imageUrl           String?  @map("image_url")
+  lowStockThreshold  Int      @default(5) @map("low_stock_threshold")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  transactionItems TransactionItem[]
+
+  @@map("products")
+}
+
+model Transaction {
+  id           String    @id @default(uuid())
+  type         String    // IN or OUT
+  status       String    @default("PENDING") // PENDING or COMPLETED
+  totalAmount  Int       @default(0) @map("total_amount")
+  kepoGuess    String?   @map("kepo_guess")
+  kepoAudioUrl String?   @map("kepo_audio_url")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  completedAt  DateTime? @map("completed_at")
+
+  items TransactionItem[]
+
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id            String   @id @default(uuid())
+  transactionId String   @map("transaction_id")
+  productId     String   @map("product_id")
+  quantity      Int      @default(1)
+  unitPrice     Int      @map("unit_price")
+  scannedAt     DateTime @default(now()) @map("scanned_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id])
+
+  @@map("transaction_items")
+}
