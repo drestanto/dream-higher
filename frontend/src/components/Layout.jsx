@@ -10,8 +10,8 @@ import {
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/scan/out', icon: ScanLine, label: 'Scan OUT (Jual)' },
-  { to: '/scan/in', icon: PackagePlus, label: 'Scan IN (Beli)' },
+  { to: '/scan/out', icon: ScanLine, label: 'Customer Beli' },
+  { to: '/scan/in', icon: PackagePlus, label: 'Beli ke Vendor' },
   { to: '/history', icon: History, label: 'Riwayat' },
   { to: '/products', icon: Package, label: 'Produk' },
 ];

@@ -165,7 +165,7 @@ export default function ScanPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
               <ScanLine className="w-7 h-7" />
-              {transactionType === 'OUT' ? 'Penjualan (OUT)' : 'Pembelian Stok (IN)'}
+              {transactionType === 'OUT' ? 'Customer Beli' : 'Beli ke Vendor'}
             </h1>
 
             {/* Mode Toggle */}

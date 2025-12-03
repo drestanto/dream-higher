@@ -37,7 +37,7 @@ export default function TransactionPanel({ onComplete, onCancel }) {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-gray-800">
-              {currentTransaction.type === 'OUT' ? 'Penjualan' : 'Pembelian'}
+              {currentTransaction.type === 'OUT' ? 'Customer Beli' : 'Beli ke Vendor'}
             </h3>
             <p className="text-sm text-gray-500">
               {items.length} item

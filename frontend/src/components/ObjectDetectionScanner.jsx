@@ -14,6 +14,7 @@ export default function ObjectDetectionScanner({
   const [detectionLabels, setDetectionLabels] = useState([]);
   const [lastDetection, setLastDetection] = useState(null);
   const [trackedObjects, setTrackedObjects] = useState({});
+  const [currentDetections, setCurrentDetections] = useState([]); // Real-time detection display
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -125,12 +126,20 @@ export default function ObjectDetectionScanner({
       if (!detectResponse.data.results?.length) {
         console.log(`[DETECTION] No objects detected in frame`);
         setLastDetection(null);
+        setCurrentDetections([]);
         setIsProcessing(false);
         return;
       }
 
       const results = detectResponse.data.results;
       console.log(`[DETECTION] Found ${results.length} object(s):`, results.map(r => `${r.name} (${(r.confidence * 100).toFixed(0)}%)`).join(', '));
+
+      // Update real-time detection display
+      setCurrentDetections(results.map(r => ({
+        name: r.name,
+        confidence: r.confidence,
+        zone: determineZone(r.bbox, detectResponse.data.image_size?.[0] || 640),
+      })));
       const imageWidth = detectResponse.data.image_size?.[0] || 640;
 
       // Process each detected object
@@ -205,6 +214,7 @@ export default function ObjectDetectionScanner({
       }
     } catch (err) {
       console.error('Detection error:', err);
+      setCurrentDetections([]);
     } finally {
       const totalTime = performance.now() - frameStart;
       console.log(`[LATENCY] Total frame processing: ${totalTime.toFixed(0)}ms`);
@@ -326,19 +336,41 @@ export default function ObjectDetectionScanner({
           </div>
         )}
 
-        {/* Last detection info */}
+        {/* Real-time detection display */}
+        {isScanning && (
+          <div className="absolute top-10 left-2 right-2">
+            {/* Current detections */}
+            {currentDetections.length > 0 ? (
+              <div className="space-y-1">
+                {currentDetections.map((det, i) => (
+                  <div key={i} className={`px-2 py-1 rounded text-xs text-white ${
+                    det.zone === 'left' ? 'bg-blue-600/80' : 'bg-green-600/80'
+                  }`}>
+                    {det.name} ({(det.confidence * 100).toFixed(0)}%) - {det.zone === 'left' ? 'WARUNG' : 'LUAR'}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-2 py-1 rounded text-xs text-white bg-gray-600/80 inline-block">
+                No object detected
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Last detection info (movement triggered) */}
         {lastDetection && (
           <div className={`absolute bottom-2 left-2 right-2 p-2 rounded text-white text-sm ${
             lastDetection.matched ? 'bg-green-600/90' : 'bg-yellow-600/90'
           }`}>
             <div className="font-medium">
               {lastDetection.matched
-                ? `Detected: ${lastDetection.productName}`
+                ? `${lastDetection.action === 'add' ? '+' : '-'} ${lastDetection.productName}`
                 : `Unknown: ${lastDetection.label}`
               }
             </div>
             <div className="text-xs opacity-80">
-              Zone: {lastDetection.zone} | Direction: {lastDetection.direction} |
+              Zone: {lastDetection.zone} | Action: {lastDetection.action} |
               Confidence: {(lastDetection.confidence * 100).toFixed(0)}%
             </div>
           </div>
