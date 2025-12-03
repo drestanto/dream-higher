@@ -1,6 +1,6 @@
 # Dream Higher
 
-A smart financial transaction tracking app for small shops (warung) with barcode scanning, AI-powered object detection, and an annoying "Kepo Warung" AI that guesses what you're cooking!
+A smart financial transaction tracking app for small shops (warung) with barcode scanning and an annoying "Kepo Warung" AI that guesses what you're cooking!
 
 ## Features
 
@@ -10,45 +10,43 @@ A smart financial transaction tracking app for small shops (warung) with barcode
 - Different sound feedback for IN (stock purchase) vs OUT (sales)
 - Quantity adjustment and item removal on the fly
 
-### 2. AI Object Detection
-- Camera-based product detection using Kolosal AI
-- Split-zone tracking (left/right) to detect item movement direction
-- Automatic IN/OUT classification based on movement
-- Mirror mode for flexible camera setup
-
-### 3. Dashboard & Analytics
-- Daily/weekly/monthly sales summary
-- Revenue charts and top-selling products
-- Low stock alerts (rule-based, no AI needed)
+### 2. Dashboard & Analytics
+- Daily sales summary with revenue charts
+- Top-selling products visualization
+- Category breakdown (doughnut chart)
+- Low stock alerts (rule-based threshold)
 - Transaction history with filters
 
-### 4. Receipt Generation
+### 3. Receipt Generation
 - Print receipts via browser
-- Download as PDF
 - Indonesian Rupiah formatting
+- Transaction details with itemized list
 
-### 5. "Kepo Warung" - AI Recipe Guessing
+### 4. "Kepo Warung" - AI Recipe Guessing
 The star feature! An annoying Indonesian shopkeeper AI that:
 - Triggers when customer buys 5+ items
 - Guesses what they're cooking based on purchases
 - Speaks the guess out loud in Indonesian
 - Example: *"Wah mau bikin bolu ya mas?? Enak tuh!"*
+- Stays silent if no confident guess (returns NULL)
 
 ## Tech Stack
 
 ### Backend
-- Node.js + Express.js
-- SQLite + Prisma ORM
-- Socket.io (real-time)
+- **Runtime:** Node.js 18+
+- **Framework:** Express.js 5
+- **Database:** SQLite + Prisma ORM 5
+- **Real-time:** Socket.io 4.8
 
 ### Frontend
-- React + Vite
-- Tailwind CSS
-- Zustand (state management)
-- Chart.js
-- html5-qrcode
+- **Framework:** React 19 + Vite 7
+- **Styling:** Tailwind CSS 4
+- **State:** Zustand
+- **Charts:** Chart.js + react-chartjs-2
+- **Scanner:** html5-qrcode
+- **Icons:** Lucide React
 
-### AI Services (Powered by Kolosal AI)
+### AI Services
 | Feature | Provider | API |
 |---------|----------|-----|
 | Recipe Guessing | Kolosal | `/v1/chat/completions` |
@@ -59,8 +57,8 @@ The star feature! An annoying Indonesian shopkeeper AI that:
 
 ### Prerequisites
 - Node.js 18+
-- npm or yarn
-- Kolosal API key
+- npm
+- Kolosal API key (for AI features)
 - OpenAI API key (for TTS)
 
 ### Installation
@@ -73,20 +71,21 @@ cd dream-higher
 # Backend setup
 cd backend
 npm install
-cp .env.example .env  # Configure your API keys
-npx prisma migrate dev
+npx prisma db push
 npm run seed
 npm run dev
+# Server runs on http://localhost:3001
 
 # Frontend setup (new terminal)
 cd frontend
 npm install
 npm run dev
+# App runs on http://localhost:5173
 ```
 
 ### Environment Variables
 
-**Backend (.env)**
+**Backend (`backend/.env`)**
 ```bash
 DATABASE_URL="file:./dev.db"
 PORT=3001
@@ -96,10 +95,10 @@ KOLOSAL_API_URL="https://api.kolosal.ai"
 OPENAI_API_KEY="your-openai-api-key"
 ```
 
-**Frontend (.env)**
+**Frontend (`frontend/.env`)**
 ```bash
-VITE_API_URL="http://localhost:3001"
-VITE_WS_URL="ws://localhost:3001"
+VITE_API_URL=http://localhost:3001
+VITE_WS_URL=ws://localhost:3001
 ```
 
 ## Project Structure
@@ -109,22 +108,48 @@ dream-higher/
 ├── backend/
 │   ├── src/
 │   │   ├── routes/
+│   │   │   ├── products.js      # Product CRUD + barcode lookup
+│   │   │   ├── transactions.js  # Transaction management
+│   │   │   ├── analytics.js     # Dashboard data
+│   │   │   └── ai.js            # Kepo Warung + detection
 │   │   ├── services/
-│   │   └── index.js
+│   │   │   ├── ai.js            # Kolosal & OpenAI integration
+│   │   │   └── socket.js        # WebSocket handler
+│   │   └── index.js             # Express + Socket.io server
 │   ├── prisma/
-│   │   ├── schema.prisma
-│   │   └── seed.js
+│   │   ├── schema.prisma        # Database schema
+│   │   └── seed.js              # 38 Indonesian products
+│   ├── public/audio/            # Generated TTS files
 │   └── package.json
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── Layout.jsx           # 3-panel layout
+│   │   │   ├── BarcodeScanner.jsx   # html5-qrcode wrapper
+│   │   │   ├── TransactionPanel.jsx # Right panel
+│   │   │   ├── KepoPopup.jsx        # AI guess popup
+│   │   │   └── Receipt.jsx          # Print receipt
 │   │   ├── pages/
+│   │   │   ├── Dashboard.jsx    # Charts & stats
+│   │   │   ├── ScanPage.jsx     # Scanner + transaction
+│   │   │   ├── History.jsx      # Transaction history
+│   │   │   └── Products.jsx     # Product catalog
 │   │   ├── stores/
-│   │   └── App.jsx
+│   │   │   └── transactionStore.js  # Zustand store
+│   │   ├── services/
+│   │   │   ├── api.js           # Axios instance
+│   │   │   ├── socket.js        # Socket.io client
+│   │   │   └── sound.js         # Web Audio beeps
+│   │   ├── App.jsx              # React Router
+│   │   ├── main.jsx             # Entry point
+│   │   └── index.css            # Tailwind + custom styles
 │   └── package.json
 │
 ├── IMPLEMENTATION_PLAN.md
+├── TESTING_GUIDE.md
+├── TRACABLE_AI_GENERATED_CODE.md
+├── CONTINUE_FROM_HERE.md
 ├── LICENSE
 └── README.md
 ```
@@ -132,31 +157,62 @@ dream-higher/
 ## API Endpoints
 
 ### Products
-- `GET /api/products` - List all products
-- `GET /api/products/barcode/:code` - Get product by barcode
-- `POST /api/products` - Create product
-- `PATCH /api/products/:id` - Update product
-- `DELETE /api/products/:id` - Delete product
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/products` | List all products |
+| GET | `/api/products/barcode/:code` | Get by barcode |
+| POST | `/api/products` | Create product |
+| PATCH | `/api/products/:id` | Update product |
+| DELETE | `/api/products/:id` | Delete product |
 
 ### Transactions
-- `GET /api/transactions` - List transactions
-- `POST /api/transactions` - Create transaction
-- `POST /api/transactions/:id/items` - Add item to transaction
-- `PATCH /api/transactions/:id/items/:itemId` - Update item quantity
-- `DELETE /api/transactions/:id/items/:itemId` - Remove item
-- `POST /api/transactions/:id/complete` - Complete transaction
-- `GET /api/transactions/:id/receipt` - Get receipt
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/transactions` | List with pagination |
+| POST | `/api/transactions` | Create (IN/OUT) |
+| POST | `/api/transactions/:id/items` | Add item by barcode |
+| PATCH | `/api/transactions/:id/items/:itemId` | Update quantity |
+| DELETE | `/api/transactions/:id/items/:itemId` | Remove item |
+| POST | `/api/transactions/:id/complete` | Complete & trigger Kepo |
+| DELETE | `/api/transactions/:id` | Cancel transaction |
+| GET | `/api/transactions/:id/receipt` | Get receipt data |
 
 ### Analytics
-- `GET /api/analytics/summary` - Summary stats
-- `GET /api/analytics/revenue` - Revenue data
-- `GET /api/analytics/top-products` - Top sellers
-- `GET /api/analytics/low-stock` - Low stock alerts
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/analytics/summary` | Today's stats |
+| GET | `/api/analytics/revenue` | 30-day revenue |
+| GET | `/api/analytics/top-products` | Best sellers |
+| GET | `/api/analytics/categories` | Sales by category |
+| GET | `/api/analytics/low-stock` | Low stock items |
 
 ### AI
-- `POST /api/ai/detect` - Object detection
-- `POST /api/ai/kepo/guess` - Recipe guessing
-- `POST /api/ai/kepo/speak` - Text-to-speech
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/ai/detect` | Object detection |
+| POST | `/api/ai/kepo/guess` | Recipe guessing |
+| POST | `/api/ai/kepo/speak` | Generate TTS |
+
+## WebSocket Events
+
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `transaction:created` | Server → Client | New transaction started |
+| `transaction:item-added` | Server → Client | Item added to transaction |
+| `transaction:item-updated` | Server → Client | Item quantity changed |
+| `transaction:item-removed` | Server → Client | Item removed |
+| `transaction:completed` | Server → Client | Transaction completed |
+| `transaction:cancelled` | Server → Client | Transaction cancelled |
+
+## Seeded Products (38 items)
+
+Categories included in seed data:
+- **Minuman** - Teh Botol, Aqua, Pocari Sweat, etc.
+- **Makanan Ringan** - Chitato, Oreo, Indomie, etc.
+- **Mie & Bihun** - Indomie variants, Mie Sedaap
+- **Bumbu Dapur** - Kecap, Sambal, Minyak Goreng, etc.
+- **Rokok** - Gudang Garam, Sampoerna, Djarum
+- **Kebutuhan Rumah Tangga** - Rinso, Sunlight, Baygon
 
 ## Acknowledgments
 

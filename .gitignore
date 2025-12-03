@@ -46,3 +46,8 @@ coverage/
 # Markdown files (except README.md)
 *.md
 !README.md
+
+# sample barcode file
+*.png
+*.jpg
+*.jpeg
