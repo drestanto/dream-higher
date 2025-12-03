@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BarcodeScanner from '../components/BarcodeScanner';
+import ObjectDetectionScanner from '../components/ObjectDetectionScanner';
 import TransactionPanel from '../components/TransactionPanel';
 import KepoPopup from '../components/KepoPopup';
 import Receipt from '../components/Receipt';
 import useTransactionStore from '../stores/transactionStore';
 import { beep } from '../services/sound';
 import api from '../services/api';
-import { CheckCircle, XCircle, ScanLine } from 'lucide-react';
+import { CheckCircle, XCircle, ScanLine, ScanBarcode, Eye } from 'lucide-react';
 
 export default function ScanPage() {
   const { type } = useParams(); // 'in' or 'out'
@@ -29,6 +30,7 @@ export default function ScanPage() {
   const [scanFeedback, setScanFeedback] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receipt, setReceipt] = useState(null);
+  const [scanMode, setScanMode] = useState('barcode'); // 'barcode' or 'detection'
 
   // Create transaction on mount
   useEffect(() => {
@@ -64,6 +66,38 @@ export default function ScanPage() {
       setScanFeedback({
         type: 'error',
         message: error.response?.data?.error || 'Produk tidak ditemukan',
+      });
+      setTimeout(() => setScanFeedback(null), 2000);
+    }
+  };
+
+  // Handle AI object detection
+  const handleDetection = async ({ product, direction, confidence }) => {
+    try {
+      if (!currentTransaction) {
+        await createTransaction(transactionType);
+      }
+
+      // For OUT: direction 'out' adds to cart
+      // For IN: direction 'in' adds to cart
+      // The ObjectDetectionScanner already filters valid movements
+
+      await addItemByBarcode(product.barcode);
+
+      // Play success sound
+      beep(transactionType === 'OUT' ? 'scanOut' : 'scanIn');
+
+      // Show success feedback
+      setScanFeedback({
+        type: 'success',
+        message: `${product.name} (${(confidence * 100).toFixed(0)}%)`,
+      });
+      setTimeout(() => setScanFeedback(null), 2000);
+    } catch (error) {
+      beep('error');
+      setScanFeedback({
+        type: 'error',
+        message: error.response?.data?.error || 'Gagal menambahkan produk',
       });
       setTimeout(() => setScanFeedback(null), 2000);
     }
@@ -116,21 +150,61 @@ export default function ScanPage() {
       <div className="flex-1 p-6 flex flex-col">
         {/* Header */}
         <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <ScanLine className="w-7 h-7" />
-            {transactionType === 'OUT' ? 'Penjualan (OUT)' : 'Pembelian Stok (IN)'}
-          </h1>
-          <p className="text-gray-500">
-            {transactionType === 'OUT'
-              ? 'Scan barcode produk yang dibeli customer'
-              : 'Scan barcode produk yang masuk ke stok'}
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <ScanLine className="w-7 h-7" />
+              {transactionType === 'OUT' ? 'Penjualan (OUT)' : 'Pembelian Stok (IN)'}
+            </h1>
+
+            {/* Mode Toggle */}
+            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setScanMode('barcode')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  scanMode === 'barcode'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <ScanBarcode className="w-4 h-4" />
+                Barcode
+              </button>
+              <button
+                onClick={() => setScanMode('detection')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  scanMode === 'detection'
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <Eye className="w-4 h-4" />
+                AI Detection
+              </button>
+            </div>
+          </div>
+          <p className="text-gray-500 mt-1">
+            {scanMode === 'barcode'
+              ? transactionType === 'OUT'
+                ? 'Scan barcode produk yang dibeli customer'
+                : 'Scan barcode produk yang masuk ke stok'
+              : transactionType === 'OUT'
+                ? 'Gerakkan barang dari warung ke luar untuk jual'
+                : 'Gerakkan barang dari luar ke warung untuk beli'}
           </p>
         </div>
 
         {/* Scanner */}
         <div className="flex-1 flex flex-col">
           <div className="relative flex-1 min-h-[300px]">
-            <BarcodeScanner onScan={handleScan} isActive={true} />
+            {scanMode === 'barcode' ? (
+              <BarcodeScanner onScan={handleScan} isActive={true} />
+            ) : (
+              <ObjectDetectionScanner
+                onDetect={handleDetection}
+                transactionType={transactionType}
+                isActive={true}
+              />
+            )}
 
             {/* Scan feedback overlay */}
             {scanFeedback && (

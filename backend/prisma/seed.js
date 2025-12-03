@@ -58,9 +58,10 @@ const products = [
   { barcode: '8991001234703', name: 'Keju Kraft', category: 'Bahan', buyPrice: 8000, sellPrice: 12000, stock: 4 },
 
   // Real barcode products (for testing with actual items)
-  { barcode: '4987176000552', name: 'Vicks VapoRub', category: 'Obat', buyPrice: 50000, sellPrice: 100000, stock: 10 },
-  { barcode: '9325344002642', name: 'Sabun', category: 'Kebutuhan Rumah', buyPrice: 2000, sellPrice: 3000, stock: 20 },
-  { barcode: '6930444800789', name: 'Pen Tablet', category: 'Elektronik', buyPrice: 1000000, sellPrice: 1200000, stock: 5 },
+  // These have detectionLabel for AI object detection
+  { barcode: '4987176000552', name: 'Vicks VapoRub', category: 'Obat', buyPrice: 50000, sellPrice: 100000, stock: 10, detectionLabel: 'vicks tube' },
+  { barcode: '9325344002642', name: 'Sabun', category: 'Kebutuhan Rumah', buyPrice: 2000, sellPrice: 3000, stock: 20, detectionLabel: 'soap box' },
+  { barcode: '6930444800789', name: 'Pen Tablet', category: 'Elektronik', buyPrice: 1000000, sellPrice: 1200000, stock: 5, detectionLabel: 'tablet box' },
 ];
 
 async function main() {

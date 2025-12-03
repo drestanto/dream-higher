@@ -17,6 +17,7 @@ model Product {
   category           String
   imageUrl           String?  @map("image_url")
   lowStockThreshold  Int      @default(5) @map("low_stock_threshold")
+  detectionLabel     String?  @map("detection_label") // Unique label for AI object detection
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 

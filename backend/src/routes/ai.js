@@ -20,25 +20,25 @@ router.post('/detect', async (req, res) => {
   }
 });
 
-// Match detected object to product
+// Match detected object to product by detectionLabel
 router.post('/match', async (req, res) => {
   try {
-    const { detectedName } = req.body;
+    const { detectedLabel } = req.body;
     const { prisma } = await import('../index.js');
 
-    // Try to find a matching product by name (fuzzy match)
-    const products = await prisma.product.findMany();
+    if (!detectedLabel) {
+      return res.status(400).json({ error: 'detectedLabel is required' });
+    }
 
-    const normalizedDetected = detectedName.toLowerCase();
+    const normalizedLabel = detectedLabel.toLowerCase().trim();
 
-    // Simple fuzzy matching
-    const match = products.find((p) => {
-      const normalizedProduct = p.name.toLowerCase();
-      return (
-        normalizedProduct.includes(normalizedDetected) ||
-        normalizedDetected.includes(normalizedProduct) ||
-        normalizedProduct.split(' ').some((word) => normalizedDetected.includes(word))
-      );
+    // Find product by exact detectionLabel match
+    const match = await prisma.product.findFirst({
+      where: {
+        detectionLabel: {
+          equals: normalizedLabel,
+        },
+      },
     });
 
     if (match) {
@@ -49,6 +49,33 @@ router.post('/match', async (req, res) => {
   } catch (error) {
     console.error('Error matching product:', error);
     res.status(500).json({ error: 'Failed to match product' });
+  }
+});
+
+// Get all detection labels for prompts
+router.get('/detection-labels', async (req, res) => {
+  try {
+    const { prisma } = await import('../index.js');
+
+    const products = await prisma.product.findMany({
+      where: {
+        detectionLabel: {
+          not: null,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        detectionLabel: true,
+      },
+    });
+
+    const labels = products.map((p) => p.detectionLabel);
+
+    res.json({ labels, products });
+  } catch (error) {
+    console.error('Error fetching detection labels:', error);
+    res.status(500).json({ error: 'Failed to fetch detection labels' });
   }
 });
 
