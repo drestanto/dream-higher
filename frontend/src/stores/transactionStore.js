@@ -84,6 +84,49 @@ const useTransactionStore = create((set, get) => ({
     }
   },
 
+  // Decrease item quantity by 1 (for object detection cancel)
+  decreaseItemByBarcode: async (barcode) => {
+    const { currentTransaction, items } = get();
+    if (!currentTransaction) return { success: false };
+
+    // Find item with this barcode
+    const item = items.find((i) => i.product?.barcode === barcode);
+    if (!item) return { success: false, reason: 'not_found' };
+
+    if (item.quantity <= 1) {
+      // Remove item completely
+      try {
+        const response = await api.delete(
+          `/transactions/${currentTransaction.id}/items/${item.id}`
+        );
+        set({
+          currentTransaction: response.data.transaction,
+          items: response.data.transaction.items,
+        });
+        return { success: true, action: 'removed' };
+      } catch (error) {
+        set({ error: error.message });
+        return { success: false };
+      }
+    } else {
+      // Decrease quantity by 1
+      try {
+        const response = await api.patch(
+          `/transactions/${currentTransaction.id}/items/${item.id}`,
+          { quantity: item.quantity - 1 }
+        );
+        set({
+          currentTransaction: response.data.transaction,
+          items: response.data.transaction.items,
+        });
+        return { success: true, action: 'decreased' };
+      } catch (error) {
+        set({ error: error.message });
+        return { success: false };
+      }
+    }
+  },
+
   // Complete transaction
   completeTransaction: async () => {
     const { currentTransaction } = get();

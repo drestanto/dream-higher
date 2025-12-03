@@ -19,6 +19,7 @@ export default function ScanPage() {
     currentTransaction,
     createTransaction,
     addItemByBarcode,
+    decreaseItemByBarcode,
     completeTransaction,
     cancelTransaction,
     kepoGuess,
@@ -72,32 +73,43 @@ export default function ScanPage() {
   };
 
   // Handle AI object detection
-  const handleDetection = async ({ product, direction, confidence }) => {
+  const handleDetection = async ({ product, action, confidence }) => {
     try {
       if (!currentTransaction) {
         await createTransaction(transactionType);
       }
 
-      // For OUT: direction 'out' adds to cart
-      // For IN: direction 'in' adds to cart
-      // The ObjectDetectionScanner already filters valid movements
+      if (action === 'add') {
+        // Add item to cart
+        await addItemByBarcode(product.barcode);
+        beep(transactionType === 'OUT' ? 'scanOut' : 'scanIn');
+        setScanFeedback({
+          type: 'success',
+          message: `+ ${product.name} (${(confidence * 100).toFixed(0)}%)`,
+        });
+      } else if (action === 'cancel') {
+        // Decrease item from cart
+        const result = await decreaseItemByBarcode(product.barcode);
+        if (result.success) {
+          beep('error'); // Use error beep for cancel feedback
+          setScanFeedback({
+            type: 'warning',
+            message: `- ${product.name} (${result.action === 'removed' ? 'dihapus' : 'dikurangi'})`,
+          });
+        } else {
+          setScanFeedback({
+            type: 'error',
+            message: `${product.name} tidak ada di keranjang`,
+          });
+        }
+      }
 
-      await addItemByBarcode(product.barcode);
-
-      // Play success sound
-      beep(transactionType === 'OUT' ? 'scanOut' : 'scanIn');
-
-      // Show success feedback
-      setScanFeedback({
-        type: 'success',
-        message: `${product.name} (${(confidence * 100).toFixed(0)}%)`,
-      });
       setTimeout(() => setScanFeedback(null), 2000);
     } catch (error) {
       beep('error');
       setScanFeedback({
         type: 'error',
-        message: error.response?.data?.error || 'Gagal menambahkan produk',
+        message: error.response?.data?.error || 'Gagal memproses produk',
       });
       setTimeout(() => setScanFeedback(null), 2000);
     }
@@ -212,6 +224,8 @@ export default function ScanPage() {
                 className={`absolute top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg ${
                   scanFeedback.type === 'success'
                     ? 'bg-green-500 text-white'
+                    : scanFeedback.type === 'warning'
+                    ? 'bg-yellow-500 text-white'
                     : 'bg-red-500 text-white'
                 }`}
               >

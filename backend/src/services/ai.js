@@ -124,6 +124,9 @@ export async function detectObjects(imageBase64, prompts = ['bottle', 'food', 's
     return { success: false, results: [] };
   }
 
+  const startTime = Date.now();
+  console.log(`[LATENCY] Kolosal API call starting... (prompts: ${prompts.join(', ')})`);
+
   try {
     const response = await axios.post(
       `${KOLOSAL_API_URL}/v1/segment/base64`,
@@ -142,9 +145,15 @@ export async function detectObjects(imageBase64, prompts = ['bottle', 'food', 's
       }
     );
 
+    const endTime = Date.now();
+    const kolosalProcessTime = response.data.processing_time_ms || 'N/A';
+    console.log(`[LATENCY] Kolosal API response: ${endTime - startTime}ms (internal: ${kolosalProcessTime}ms)`);
+    console.log(`[LATENCY] Results: ${response.data.results?.length || 0} objects detected`);
+
     return response.data;
   } catch (error) {
-    console.error('Error detecting objects:', error.response?.data || error.message);
+    const endTime = Date.now();
+    console.error(`[LATENCY] Kolosal API error after ${endTime - startTime}ms:`, error.response?.data || error.message);
     return { success: false, results: [], error: error.message };
   }
 }

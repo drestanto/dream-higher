@@ -91,6 +91,7 @@ export default function ObjectDetectionScanner({
     if (isProcessing || !isScanning) return;
 
     setIsProcessing(true);
+    const frameStart = performance.now();
 
     try {
       const imageBase64 = captureFrame();
@@ -99,19 +100,37 @@ export default function ObjectDetectionScanner({
         return;
       }
 
+      const captureTime = performance.now();
+      console.log(`[LATENCY] Frame capture: ${(captureTime - frameStart).toFixed(0)}ms`);
+
       // Call object detection API
+      const apiStart = performance.now();
+      const promptsToUse = detectionLabels.length > 0 ? detectionLabels : ['box', 'tube', 'bottle'];
+      console.log(`[DETECTION] Sending prompts:`, promptsToUse);
       const detectResponse = await api.post('/ai/detect', {
         image: imageBase64,
-        prompts: detectionLabels.length > 0 ? detectionLabels : ['box', 'tube', 'bottle'],
+        prompts: promptsToUse,
       });
+      const apiEnd = performance.now();
+      console.log(`[LATENCY] API /ai/detect: ${(apiEnd - apiStart).toFixed(0)}ms`);
+      console.log(`[DETECTION] Response:`, detectResponse.data);
 
-      if (!detectResponse.data.success || !detectResponse.data.results?.length) {
+      if (!detectResponse.data.success) {
+        console.log(`[DETECTION] API returned success=false`);
+        setLastDetection(null);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (!detectResponse.data.results?.length) {
+        console.log(`[DETECTION] No objects detected in frame`);
         setLastDetection(null);
         setIsProcessing(false);
         return;
       }
 
       const results = detectResponse.data.results;
+      console.log(`[DETECTION] Found ${results.length} object(s):`, results.map(r => `${r.name} (${(r.confidence * 100).toFixed(0)}%)`).join(', '));
       const imageWidth = detectResponse.data.image_size?.[0] || 640;
 
       // Process each detected object
@@ -130,14 +149,17 @@ export default function ObjectDetectionScanner({
 
         if (prevZone && prevZone !== zone) {
           // Object moved between zones!
-          let direction = '';
+          const movedLeftToRight = prevZone === 'left' && zone === 'right';
+          const movedRightToLeft = prevZone === 'right' && zone === 'left';
 
-          if (isMirrored) {
-            // Mirrored: left and right are swapped visually
-            direction = zone === 'left' ? 'out' : 'in';
+          // Determine action based on transaction type and movement direction
+          // JUAL (OUT): left→right = ADD, right→left = CANCEL
+          // BELI (IN): right→left = ADD, left→right = CANCEL
+          let action = null;
+          if (transactionType === 'OUT') {
+            action = movedLeftToRight ? 'add' : 'cancel';
           } else {
-            // Normal: left=warung, right=customer
-            direction = zone === 'right' ? 'out' : 'in';
+            action = movedRightToLeft ? 'add' : 'cancel';
           }
 
           // Match detected label to product
@@ -148,29 +170,31 @@ export default function ObjectDetectionScanner({
           if (matchResponse.data.matched && matchResponse.data.product) {
             const product = matchResponse.data.product;
 
-            // Check if this movement is valid for current transaction type
-            const isValidMovement =
-              (transactionType === 'OUT' && direction === 'out') ||
-              (transactionType === 'IN' && direction === 'in');
+            onDetect({
+              product,
+              action, // 'add' or 'cancel'
+              confidence,
+              zone,
+            });
 
-            if (isValidMovement) {
-              onDetect({
-                product,
-                direction,
-                confidence,
-                zone,
-              });
-            }
+            setLastDetection({
+              label: detectedLabel,
+              zone,
+              action,
+              confidence,
+              matched: true,
+              productName: product.name,
+            });
+          } else {
+            setLastDetection({
+              label: detectedLabel,
+              zone,
+              action,
+              confidence,
+              matched: false,
+              productName: null,
+            });
           }
-
-          setLastDetection({
-            label: detectedLabel,
-            zone,
-            direction,
-            confidence,
-            matched: matchResponse.data.matched,
-            productName: matchResponse.data.product?.name,
-          });
         }
 
         // Update tracked zone
@@ -182,6 +206,9 @@ export default function ObjectDetectionScanner({
     } catch (err) {
       console.error('Detection error:', err);
     } finally {
+      const totalTime = performance.now() - frameStart;
+      console.log(`[LATENCY] Total frame processing: ${totalTime.toFixed(0)}ms`);
+      console.log('---');
       setIsProcessing(false);
     }
   }, [isProcessing, isScanning, captureFrame, detectionLabels, determineZone, trackedObjects, isMirrored, transactionType, onDetect]);
@@ -270,21 +297,25 @@ export default function ObjectDetectionScanner({
             {/* Center divider line */}
             <div className="absolute top-0 bottom-0 left-1/2 w-0.5 border-l-2 border-dashed border-white/60" />
 
-            {/* Zone labels */}
+            {/* Zone labels - WARUNG always left, LUAR always right */}
             <div className="absolute top-2 left-4 px-2 py-1 bg-blue-600/80 text-white text-xs rounded">
-              {isMirrored ? 'LUAR' : 'WARUNG'}
+              WARUNG
             </div>
             <div className="absolute top-2 right-4 px-2 py-1 bg-green-600/80 text-white text-xs rounded">
-              {isMirrored ? 'WARUNG' : 'LUAR'}
+              LUAR
             </div>
 
-            {/* Direction indicator */}
+            {/* Direction indicator - JUAL always left→right, BELI always right→left */}
             <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-black/60 text-white text-xs rounded-full">
-              {transactionType === 'OUT'
-                ? `${isMirrored ? '← JUAL' : 'JUAL →'}`
-                : `${isMirrored ? 'BELI →' : '← BELI'}`
-              }
+              {transactionType === 'OUT' ? 'JUAL →' : '← BELI'}
             </div>
+
+            {/* Mirror indicator */}
+            {isMirrored && (
+              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-yellow-500/80 text-white text-xs rounded">
+                MIRRORED
+              </div>
+            )}
           </div>
         )}
 
