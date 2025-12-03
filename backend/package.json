@@ -1,0 +1,28 @@
+{
+  "name": "dream-higher-backend",
+  "version": "1.0.0",
+  "description": "Backend for Dream Higher - Warung Transaction Tracker",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "seed": "node prisma/seed.js",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "keywords": [],
+  "author": "Drestanto Muhammad Dyasputro",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.13.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "prisma": "^5.22.0",
+    "socket.io": "^4.8.1",
+    "uuid": "^13.0.0"
+  }
+}
