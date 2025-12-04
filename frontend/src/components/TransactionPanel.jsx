@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Minus, Plus, Trash2, Check, X, Printer } from 'lucide-react';
 import useTransactionStore from '../stores/transactionStore';
 
@@ -13,6 +14,10 @@ export default function TransactionPanel({ onComplete, onCancel }) {
   const { currentTransaction, items, updateQuantity, removeItem, isLoading } =
     useTransactionStore();
 
+  // Local state for editing quantity (key: itemId, value: string input)
+  // Must be declared before any conditional returns (React hooks rules)
+  const [editingQty, setEditingQty] = useState({});
+
   if (!currentTransaction) {
     return (
       <div className="h-full flex items-center justify-center text-gray-400">
@@ -27,6 +32,41 @@ export default function TransactionPanel({ onComplete, onCancel }) {
       removeItem(itemId);
     } else {
       updateQuantity(itemId, newQty);
+    }
+  };
+
+  const handleQtyFocus = (itemId, currentQty) => {
+    setEditingQty((prev) => ({ ...prev, [itemId]: String(currentQty) }));
+  };
+
+  const handleQtyChange = (itemId, value) => {
+    setEditingQty((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  const handleQtyBlur = (itemId, originalQty) => {
+    const value = editingQty[itemId];
+    const newQty = parseInt(value, 10);
+
+    if (isNaN(newQty) || newQty < 0 || value === '' || value === undefined) {
+      // Invalid input - revert to original
+      setEditingQty((prev) => ({ ...prev, [itemId]: undefined }));
+    } else if (newQty === 0) {
+      // Zero - remove item
+      removeItem(itemId);
+      setEditingQty((prev) => ({ ...prev, [itemId]: undefined }));
+    } else {
+      // Valid number - update
+      updateQuantity(itemId, newQty);
+      setEditingQty((prev) => ({ ...prev, [itemId]: undefined }));
+    }
+  };
+
+  const handleQtyKeyDown = (e, itemId, originalQty) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    } else if (e.key === 'Escape') {
+      setEditingQty((prev) => ({ ...prev, [itemId]: undefined }));
+      e.target.blur();
     }
   };
 
@@ -95,9 +135,16 @@ export default function TransactionPanel({ onComplete, onCancel }) {
                     >
                       <Minus className="w-4 h-4" />
                     </button>
-                    <span className="w-8 text-center font-medium">
-                      {item.quantity}
-                    </span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={editingQty[item.id] !== undefined ? editingQty[item.id] : item.quantity}
+                      onFocus={() => handleQtyFocus(item.id, item.quantity)}
+                      onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                      onBlur={() => handleQtyBlur(item.id, item.quantity)}
+                      onKeyDown={(e) => handleQtyKeyDown(e, item.id, item.quantity)}
+                      className="w-12 text-center font-medium border rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                     <button
                       onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
                       className="p-1 bg-gray-100 rounded hover:bg-gray-200"
