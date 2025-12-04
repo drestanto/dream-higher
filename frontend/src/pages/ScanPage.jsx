@@ -7,7 +7,7 @@ import KepoPopup from '../components/KepoPopup';
 import useTransactionStore from '../stores/transactionStore';
 import { beep } from '../services/sound';
 import api from '../services/api';
-import { CheckCircle, XCircle, ScanLine, ScanBarcode, Eye, Printer, Home } from 'lucide-react';
+import { CheckCircle, XCircle, ScanLine, ScanBarcode, Eye, Printer, Home, Grid3X3, Search, Package } from 'lucide-react';
 
 export default function ScanPage() {
   const { type } = useParams(); // 'in' or 'out'
@@ -30,7 +30,12 @@ export default function ScanPage() {
   const [scanFeedback, setScanFeedback] = useState(null);
   const [showSummary, setShowSummary] = useState(false); // Step 1: summary view after complete
   const [receipt, setReceipt] = useState(null);
-  const [scanMode, setScanMode] = useState('barcode'); // 'barcode' or 'detection'
+  const [scanMode, setScanMode] = useState('barcode'); // 'barcode', 'detection', or 'manual'
+
+  // Manual cashier state
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Reset and create new transaction when type changes
   useEffect(() => {
@@ -54,6 +59,24 @@ export default function ScanPage() {
       reset();
     };
   }, [transactionType]);
+
+  // Fetch products when manual mode is activated
+  useEffect(() => {
+    if (scanMode === 'manual' && products.length === 0) {
+      const fetchProducts = async () => {
+        setProductsLoading(true);
+        try {
+          const response = await api.get('/products');
+          setProducts(response.data);
+        } catch (error) {
+          console.error('Error fetching products:', error);
+        } finally {
+          setProductsLoading(false);
+        }
+      };
+      fetchProducts();
+    }
+  }, [scanMode]);
 
   // Handle barcode scan
   const handleScan = async (barcode) => {
@@ -175,6 +198,50 @@ export default function ScanPage() {
     clearKepo();
   };
 
+  // Handle manual product click
+  const handleProductClick = async (product) => {
+    try {
+      if (!currentTransaction) {
+        await createTransaction(transactionType);
+      }
+
+      await addItemByBarcode(product.barcode);
+
+      // Play success sound
+      beep(transactionType === 'OUT' ? 'scanOut' : 'scanIn');
+
+      // Show success feedback
+      setScanFeedback({ type: 'success', message: `+ ${product.name}` });
+      setTimeout(() => setScanFeedback(null), 1500);
+    } catch (error) {
+      beep('error');
+      setScanFeedback({
+        type: 'error',
+        message: error.response?.data?.error || 'Gagal menambahkan produk',
+      });
+      setTimeout(() => setScanFeedback(null), 2000);
+    }
+  };
+
+  // Filter products for manual mode
+  const filteredProducts = products.filter((product) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.barcode.includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  });
+
+  // Group products by category
+  const groupedProducts = filteredProducts.reduce((acc, product) => {
+    if (!acc[product.category]) {
+      acc[product.category] = [];
+    }
+    acc[product.category].push(product);
+    return acc;
+  }, {});
+
   // Helper function to format currency
   const formatRupiah = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -279,10 +346,10 @@ export default function ScanPage() {
             </h1>
 
             {/* Mode Toggle */}
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setScanMode('barcode')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   scanMode === 'barcode'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-800'
@@ -293,14 +360,25 @@ export default function ScanPage() {
               </button>
               <button
                 onClick={() => setScanMode('detection')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   scanMode === 'detection'
                     ? 'bg-white text-purple-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
                 <Eye className="w-4 h-4" />
-                AI Detection
+                AI
+              </button>
+              <button
+                onClick={() => setScanMode('manual')}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  scanMode === 'manual'
+                    ? 'bg-white text-green-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <Grid3X3 className="w-4 h-4" />
+                Manual
               </button>
             </div>
           </div>
@@ -309,34 +387,102 @@ export default function ScanPage() {
               ? transactionType === 'OUT'
                 ? 'Scan barcode produk yang dibeli customer'
                 : 'Scan barcode produk yang masuk ke stok'
-              : transactionType === 'OUT'
+              : scanMode === 'detection'
+              ? transactionType === 'OUT'
                 ? 'Gerakkan barang dari warung ke luar untuk jual'
-                : 'Gerakkan barang dari luar ke warung untuk beli'}
+                : 'Gerakkan barang dari luar ke warung untuk beli'
+              : 'Klik produk untuk menambahkan ke transaksi'}
           </p>
         </div>
 
-        {/* Scanner */}
-        <div className="flex-1 flex flex-col">
-          <div className="relative flex-1 min-h-[300px]">
+        {/* Scanner / Manual Grid */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="relative flex-1 min-h-[300px] overflow-hidden">
             {scanMode === 'barcode' ? (
               <BarcodeScanner
                 key={`barcode-${transactionType}`}
                 onScan={handleScan}
                 isActive={true}
               />
-            ) : (
+            ) : scanMode === 'detection' ? (
               <ObjectDetectionScanner
                 key={`detection-${transactionType}`}
                 onDetect={handleDetection}
                 transactionType={transactionType}
                 isActive={true}
               />
+            ) : (
+              /* Manual Cashier Grid */
+              <div className="h-full flex flex-col bg-gray-50 rounded-lg">
+                {/* Search bar */}
+                <div className="p-3 border-b bg-white rounded-t-lg">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Cari produk..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Product grid */}
+                <div className="flex-1 overflow-auto p-3">
+                  {productsLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                    </div>
+                  ) : Object.keys(groupedProducts).length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                      <p>Tidak ada produk ditemukan</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.entries(groupedProducts)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([category, categoryProducts]) => (
+                          <div key={category}>
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                              {category}
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                              {categoryProducts.map((product) => (
+                                <button
+                                  key={product.id}
+                                  onClick={() => handleProductClick(product)}
+                                  className="bg-white rounded-lg border p-3 text-left hover:border-green-500 hover:shadow-md transition-all active:scale-95"
+                                >
+                                  <h4 className="font-medium text-gray-800 text-sm line-clamp-2 mb-1">
+                                    {product.name}
+                                  </h4>
+                                  <p className="text-green-600 font-semibold text-sm">
+                                    {formatRupiah(
+                                      transactionType === 'OUT'
+                                        ? product.sellPrice
+                                        : product.buyPrice
+                                    )}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Stok: {product.stock}
+                                  </p>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Scan feedback overlay */}
             {scanFeedback && (
               <div
-                className={`absolute top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg ${
+                className={`absolute top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg z-10 ${
                   scanFeedback.type === 'success'
                     ? 'bg-green-500 text-white'
                     : scanFeedback.type === 'warning'
