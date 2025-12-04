@@ -13,8 +13,11 @@ export default function ObjectDetectionScanner({
   const [isProcessing, setIsProcessing] = useState(false);
   const [detectionLabels, setDetectionLabels] = useState([]);
   const [lastDetection, setLastDetection] = useState(null);
-  const [trackedObjects, setTrackedObjects] = useState({});
   const [currentDetections, setCurrentDetections] = useState([]); // Real-time detection display
+
+  // Track last frame's detection (for consecutive movement detection)
+  // Only tracks ONE object - resets if different object or no object detected
+  const lastFrameRef = useRef(null); // { label: string, zone: 'left'|'right' } | null
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -48,7 +51,7 @@ export default function ObjectDetectionScanner({
       videoRef.current.srcObject = null;
     }
     setIsScanning(false);
-    setTrackedObjects({});
+    lastFrameRef.current = null;
     setLastDetection(null);
   }, []);
 
@@ -124,7 +127,8 @@ export default function ObjectDetectionScanner({
       }
 
       if (!detectResponse.data.results?.length) {
-        console.log(`[DETECTION] No objects detected in frame`);
+        console.log(`[DETECTION] No objects detected in frame - resetting tracking`);
+        lastFrameRef.current = null; // Reset tracking on no detection
         setLastDetection(null);
         setCurrentDetections([]);
         setIsProcessing(false);
@@ -134,83 +138,119 @@ export default function ObjectDetectionScanner({
       const results = detectResponse.data.results;
       console.log(`[DETECTION] Found ${results.length} object(s):`, results.map(r => `${r.name} (${(r.confidence * 100).toFixed(0)}%)`).join(', '));
 
-      // Update real-time detection display
+      const imageWidth = detectResponse.data.image_size?.[0] || 640;
+
+      // Update real-time detection display (show all for UI)
       setCurrentDetections(results.map(r => ({
         name: r.name,
         confidence: r.confidence,
-        zone: determineZone(r.bbox, detectResponse.data.image_size?.[0] || 640),
+        zone: determineZone(r.bbox, imageWidth),
       })));
-      const imageWidth = detectResponse.data.image_size?.[0] || 640;
 
-      // Process each detected object
-      for (const result of results) {
-        const detectedLabel = result.name;
-        const confidence = result.confidence;
-        const bbox = result.bbox;
+      // Filter results with confidence >= 0.5, then pick the highest confidence one
+      const validResults = results.filter(r => r.confidence >= 0.5);
+      if (validResults.length === 0) {
+        console.log(`[DETECTION] No objects with confidence >= 0.5 - resetting tracking`);
+        lastFrameRef.current = null; // Reset tracking
+        setIsProcessing(false);
+        return;
+      }
 
-        if (confidence < 0.5) continue;
+      // Pick only the highest confidence object
+      const bestResult = validResults.reduce((best, current) =>
+        current.confidence > best.confidence ? current : best
+      );
 
-        const zone = determineZone(bbox, imageWidth);
-        const objectKey = detectedLabel;
+      console.log(`[DETECTION] Selected highest confidence: ${bestResult.name} (${(bestResult.confidence * 100).toFixed(0)}%)`);
 
-        // Track object movement
-        const prevZone = trackedObjects[objectKey];
+      const detectedLabel = bestResult.name;
+      const confidence = bestResult.confidence;
+      const bbox = bestResult.bbox;
+      const zone = determineZone(bbox, imageWidth);
 
-        if (prevZone && prevZone !== zone) {
-          // Object moved between zones!
-          const movedLeftToRight = prevZone === 'left' && zone === 'right';
-          const movedRightToLeft = prevZone === 'right' && zone === 'left';
+      // Get last frame's detection
+      const lastFrame = lastFrameRef.current;
 
-          // Determine action based on transaction type and movement direction
-          // JUAL (OUT): left→right = ADD, right→left = CANCEL
-          // BELI (IN): right→left = ADD, left→right = CANCEL
-          let action = null;
-          if (transactionType === 'OUT') {
-            action = movedLeftToRight ? 'add' : 'cancel';
-          } else {
-            action = movedRightToLeft ? 'add' : 'cancel';
-          }
+      // Check if this is a CONSECUTIVE detection of the SAME object
+      const isSameObject = lastFrame && lastFrame.label === detectedLabel;
+      const prevZone = isSameObject ? lastFrame.zone : null;
 
-          // Match detected label to product
-          const matchResponse = await api.post('/ai/match', {
-            detectedLabel: detectedLabel,
-          });
+      // Update tracking for next frame
+      lastFrameRef.current = { label: detectedLabel, zone };
 
-          if (matchResponse.data.matched && matchResponse.data.product) {
-            const product = matchResponse.data.product;
+      // If different object than last frame, reset tracking - no action
+      if (lastFrame && !isSameObject) {
+        console.log(`[DETECTION] Different object detected (was: ${lastFrame.label}, now: ${detectedLabel}) - resetting tracking`);
+        setIsProcessing(false);
+        return;
+      }
 
-            onDetect({
-              product,
-              action, // 'add' or 'cancel'
-              confidence,
-              zone,
-            });
-
-            setLastDetection({
-              label: detectedLabel,
-              zone,
-              action,
-              confidence,
-              matched: true,
-              productName: product.name,
-            });
-          } else {
-            setLastDetection({
-              label: detectedLabel,
-              zone,
-              action,
-              confidence,
-              matched: false,
-              productName: null,
-            });
-          }
+      // Only trigger action if object MOVED between zones in consecutive frames
+      if (!prevZone || prevZone === zone) {
+        // First detection or same zone - no action
+        if (!prevZone) {
+          console.log(`[DETECTION] First detection of ${detectedLabel} in zone: ${zone} - waiting for consecutive movement`);
+        } else {
+          console.log(`[DETECTION] ${detectedLabel} stayed in zone: ${zone} - no action`);
         }
+        setIsProcessing(false);
+        return;
+      }
 
-        // Update tracked zone
-        setTrackedObjects(prev => ({
-          ...prev,
-          [objectKey]: zone,
-        }));
+      // Object moved between zones in consecutive frames!
+      console.log(`[DETECTION] ${detectedLabel} moved from ${prevZone} to ${zone} (consecutive)`);
+
+      // Reset tracking after triggering action to prevent duplicate triggers
+      lastFrameRef.current = null;
+
+      const movedLeftToRight = prevZone === 'left' && zone === 'right';
+      const movedRightToLeft = prevZone === 'right' && zone === 'left';
+
+      // Determine action based on transaction type and movement direction
+      // left = WARUNG (dalam), right = LUAR
+      // JUAL (OUT): dalam→luar (left→right) = ADD, luar→dalam (right→left) = CANCEL
+      // BELI (IN): luar→dalam (right→left) = ADD, dalam→luar (left→right) = CANCEL
+      let action = null;
+      if (transactionType === 'OUT') {
+        action = movedLeftToRight ? 'add' : 'cancel';
+      } else {
+        action = movedRightToLeft ? 'add' : 'cancel';
+      }
+
+      console.log(`[DETECTION] Action: ${action} (transactionType: ${transactionType})`);
+
+      // Match detected label to product
+      const matchResponse = await api.post('/ai/match', {
+        detectedLabel: detectedLabel,
+      });
+
+      if (matchResponse.data.matched && matchResponse.data.product) {
+        const product = matchResponse.data.product;
+
+        onDetect({
+          product,
+          action, // 'add' or 'cancel'
+          confidence,
+          zone,
+        });
+
+        setLastDetection({
+          label: detectedLabel,
+          zone,
+          action,
+          confidence,
+          matched: true,
+          productName: product.name,
+        });
+      } else {
+        setLastDetection({
+          label: detectedLabel,
+          zone,
+          action,
+          confidence,
+          matched: false,
+          productName: null,
+        });
       }
     } catch (err) {
       console.error('Detection error:', err);
@@ -221,7 +261,7 @@ export default function ObjectDetectionScanner({
       console.log('---');
       setIsProcessing(false);
     }
-  }, [isProcessing, isScanning, captureFrame, detectionLabels, determineZone, trackedObjects, isMirrored, transactionType, onDetect]);
+  }, [isProcessing, isScanning, captureFrame, detectionLabels, determineZone, isMirrored, transactionType, onDetect]);
 
   const startScanner = useCallback(async () => {
     try {
@@ -277,7 +317,7 @@ export default function ObjectDetectionScanner({
 
   const toggleMirror = () => {
     setIsMirrored(prev => !prev);
-    setTrackedObjects({}); // Reset tracking when mirror changes
+    lastFrameRef.current = null; // Reset tracking when mirror changes
   };
 
   return (
