@@ -54,6 +54,41 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get products for AI detection (lightweight, with detection labels only)
+router.get('/for-detection', async (req, res) => {
+  try {
+    const priceType = req.query.priceType || 'selling'; // 'selling' or 'cost'
+
+    const products = await prisma.product.findMany({
+      where: {
+        detectionLabel: { not: null },
+      },
+      select: {
+        id: true,
+        name: true,
+        barcode: true,
+        detectionLabel: true,
+        sellPrice: true,
+        buyPrice: true,
+      },
+    });
+
+    // Map to simplified format with single price based on priceType
+    const result = products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      barcode: p.barcode,
+      detectionLabel: p.detectionLabel,
+      price: priceType === 'cost' ? p.buyPrice : p.sellPrice,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching products for detection:', error);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
 // Get product by barcode
 router.get('/barcode/:code', async (req, res) => {
   try {

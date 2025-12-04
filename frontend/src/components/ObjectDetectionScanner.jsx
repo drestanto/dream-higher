@@ -23,7 +23,6 @@ export default function ObjectDetectionScanner({
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const intervalRef = useRef(null);
-  const lastProcessedRef = useRef(null);
 
   // Fetch detection labels on mount
   useEffect(() => {
@@ -111,7 +110,7 @@ export default function ObjectDetectionScanner({
       const captureTime = performance.now();
       console.log(`[LATENCY] Frame capture: ${(captureTime - frameStart).toFixed(0)}ms`);
 
-      // Call object detection API
+      // Call object detection API via backend
       const apiStart = performance.now();
       const promptsToUse = detectionLabels.length > 0 ? detectionLabels : ['box', 'tube', 'bottle'];
       console.log(`[DETECTION] Sending prompts:`, promptsToUse);
@@ -142,7 +141,7 @@ export default function ObjectDetectionScanner({
       const results = detectResponse.data.results;
       console.log(`[DETECTION] Found ${results.length} object(s):`, results.map(r => `${r.name} (${(r.confidence * 100).toFixed(0)}%)`).join(', '));
 
-      const imageWidth = detectResponse.data.image_size?.[0] || 640;
+      const imageWidth = detectResponse.data.image_size?.[0] || 320;
 
       // Update real-time detection display (show all for UI)
       setCurrentDetections(results.map(r => ({
@@ -223,7 +222,7 @@ export default function ObjectDetectionScanner({
 
       console.log(`[DETECTION] Action: ${action} (transactionType: ${transactionType})`);
 
-      // Match detected label to product
+      // Match detected label to product via backend
       const matchResponse = await api.post('/ai/match', {
         detectedLabel: detectedLabel,
       });
