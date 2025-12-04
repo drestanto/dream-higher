@@ -14,10 +14,12 @@ export default function ObjectDetectionScanner({
   const [detectionLabels, setDetectionLabels] = useState([]);
   const [lastDetection, setLastDetection] = useState(null);
   const [currentDetections, setCurrentDetections] = useState([]); // Real-time detection display
+  const [isColdStarting, setIsColdStarting] = useState(false); // Kolosal cold start wait
 
   // Track last frame's detection (for consecutive movement detection)
   // Only tracks ONE object - resets if different object or no object detected
   const lastFrameRef = useRef(null); // { label: string, zone: 'left'|'right' } | null
+  const coldStartTimerRef = useRef(null);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -42,6 +44,10 @@ export default function ObjectDetectionScanner({
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    if (coldStartTimerRef.current) {
+      clearTimeout(coldStartTimerRef.current);
+      coldStartTimerRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -50,6 +56,7 @@ export default function ObjectDetectionScanner({
       videoRef.current.srcObject = null;
     }
     setIsScanning(false);
+    setIsColdStarting(false);
     lastFrameRef.current = null;
     setLastDetection(null);
   }, []);
@@ -284,10 +291,15 @@ export default function ObjectDetectionScanner({
       }
 
       setIsScanning(true);
+      setIsColdStarting(true);
       setError(null);
 
-      // Start detection loop at ~2 FPS (500ms interval) for better latency
-      intervalRef.current = setInterval(processDetection, 500);
+      // Wait for Kolosal cold start (16.5s) before starting detection
+      coldStartTimerRef.current = setTimeout(() => {
+        setIsColdStarting(false);
+        // Start detection loop at ~2 FPS (500ms interval)
+        intervalRef.current = setInterval(processDetection, 500);
+      }, 16500);
 
     } catch (err) {
       setError(`Gagal mengakses kamera: ${err.message}`);
@@ -372,15 +384,24 @@ export default function ObjectDetectionScanner({
           </div>
         )}
 
+        {/* Cold start overlay */}
+        {isColdStarting && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center rounded-lg">
+            <Loader2 className="w-12 h-12 text-purple-400 animate-spin mb-4" />
+            <p className="text-white text-sm font-medium">Waiting for almighty Kolosal cold start...</p>
+            <p className="text-gray-400 text-xs mt-1">~16 detik, sabar ya wkwkwk</p>
+          </div>
+        )}
+
         {/* Processing indicator */}
-        {isProcessing && (
+        {isProcessing && !isColdStarting && (
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
             <Loader2 className="w-8 h-8 text-white animate-spin" />
           </div>
         )}
 
         {/* Real-time detection display */}
-        {isScanning && (
+        {isScanning && !isColdStarting && (
           <div className="absolute top-10 left-2 right-2">
             {/* Current detections */}
             {currentDetections.length > 0 ? (
