@@ -4,11 +4,16 @@ import Dashboard from './pages/Dashboard';
 import ScanPage from './pages/ScanPage';
 import History from './pages/History';
 import Products from './pages/Products';
+import ReceiptPage from './pages/ReceiptPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Isolated receipt page - no layout, opens in new tab */}
+        <Route path="receipt/:id" element={<ReceiptPage />} />
+
+        {/* Main app with layout */}
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="scan/:type" element={<ScanPage />} />

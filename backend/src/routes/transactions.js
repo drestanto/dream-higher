@@ -363,7 +363,7 @@ router.get('/:id/receipt', async (req, res) => {
 
     const receipt = {
       shopName: 'WARUNG DREAM HIGHER',
-      address: 'Jl. Contoh No. 123',
+      address: 'Jl. Dream Higher Hackathon Imphnen X Kolosal',
       date: transaction.completedAt || transaction.createdAt,
       receiptNumber: `TXN-${new Date(transaction.createdAt).toISOString().slice(0, 10).replace(/-/g, '')}-${transaction.id.slice(0, 4).toUpperCase()}`,
       type: transaction.type === 'OUT' ? 'SALE' : 'PURCHASE',

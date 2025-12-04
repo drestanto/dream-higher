@@ -4,11 +4,10 @@ import BarcodeScanner from '../components/BarcodeScanner';
 import ObjectDetectionScanner from '../components/ObjectDetectionScanner';
 import TransactionPanel from '../components/TransactionPanel';
 import KepoPopup from '../components/KepoPopup';
-import Receipt from '../components/Receipt';
 import useTransactionStore from '../stores/transactionStore';
 import { beep } from '../services/sound';
 import api from '../services/api';
-import { CheckCircle, XCircle, ScanLine, ScanBarcode, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, ScanLine, ScanBarcode, Eye, Printer, Home } from 'lucide-react';
 
 export default function ScanPage() {
   const { type } = useParams(); // 'in' or 'out'
@@ -29,7 +28,7 @@ export default function ScanPage() {
   } = useTransactionStore();
 
   const [scanFeedback, setScanFeedback] = useState(null);
-  const [showReceipt, setShowReceipt] = useState(false);
+  const [showSummary, setShowSummary] = useState(false); // Step 1: summary view after complete
   const [receipt, setReceipt] = useState(null);
   const [scanMode, setScanMode] = useState('barcode'); // 'barcode' or 'detection'
 
@@ -135,15 +134,31 @@ export default function ScanPage() {
       // Play complete sound
       beep('complete');
 
-      // Fetch receipt
+      // Fetch receipt data
       if (currentTransaction) {
         const receiptRes = await api.get(`/transactions/${currentTransaction.id}/receipt`);
         setReceipt(receiptRes.data);
-        setShowReceipt(true);
+        // Show summary first (Step 1), not full receipt yet
+        setShowSummary(true);
       }
     } catch (error) {
       console.error('Error completing transaction:', error);
     }
+  };
+
+  // Handle print/download - open receipt in new tab
+  const handlePrintReceipt = () => {
+    if (currentTransaction) {
+      window.open(`/receipt/${currentTransaction.id}`, '_blank');
+    }
+  };
+
+  // Handle back to home from summary
+  const handleBackToHome = () => {
+    setShowSummary(false);
+    setReceipt(null);
+    reset();
+    navigate('/');
   };
 
   // Handle cancel
@@ -155,18 +170,101 @@ export default function ScanPage() {
     }
   };
 
-  // Handle close receipt
-  const handleCloseReceipt = () => {
-    setShowReceipt(false);
-    setReceipt(null);
-    reset();
-    navigate('/');
-  };
-
   // Handle close kepo popup
   const handleCloseKepo = () => {
     clearKepo();
   };
+
+  // Helper function to format currency
+  const formatRupiah = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Show summary view after transaction complete
+  if (showSummary && receipt) {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Header - same style as scan page */}
+        <div className="p-6 border-b">
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <CheckCircle className="w-7 h-7 text-green-500" />
+            Transaksi Selesai
+          </h1>
+          <p className="text-gray-500 mt-1">
+            {transactionType === 'OUT' ? 'Customer Beli' : 'Beli ke Vendor'} - {receipt.receiptNumber}
+          </p>
+        </div>
+
+        {/* Summary Content */}
+        <div className="flex-1 p-6 overflow-auto">
+          <div className="max-w-lg mx-auto">
+            {/* Items list */}
+            <div className="bg-white rounded-lg shadow-sm border">
+              <div className="p-4 border-b bg-gray-50">
+                <h3 className="font-semibold text-gray-800">Detail Pembelian</h3>
+                <p className="text-sm text-gray-500">{receipt.items.length} item</p>
+              </div>
+
+              <div className="divide-y">
+                {receipt.items.map((item, index) => (
+                  <div key={index} className="p-4 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-800">{item.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {formatRupiah(item.price)} x {item.quantity}
+                      </p>
+                    </div>
+                    <p className="font-semibold text-gray-800">
+                      {formatRupiah(item.total)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total */}
+              <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
+                <span className="text-lg font-semibold text-gray-800">Total</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {formatRupiah(receipt.total)}
+                </span>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={handleBackToHome}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                <Home className="w-5 h-5" />
+                <span>Kembali</span>
+              </button>
+              <button
+                onClick={handlePrintReceipt}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Printer className="w-5 h-5" />
+                <span>Cetak Struk</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Kepo Popup */}
+        {kepoGuess && (
+          <KepoPopup
+            guess={kepoGuess}
+            audioUrl={kepoAudioUrl}
+            onClose={handleCloseKepo}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex">
@@ -290,10 +388,6 @@ export default function ScanPage() {
         />
       )}
 
-      {/* Receipt Modal */}
-      {showReceipt && receipt && (
-        <Receipt receipt={receipt} onClose={handleCloseReceipt} />
-      )}
     </div>
   );
 }
