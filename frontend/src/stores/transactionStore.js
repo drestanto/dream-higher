@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import api from '../services/api';
-import { socket } from '../services/socket';
 
 const useTransactionStore = create((set, get) => ({
   currentTransaction: null,
@@ -182,30 +181,6 @@ const useTransactionStore = create((set, get) => ({
       kepoAudioUrl: null,
     });
   },
-
-  // Socket event handlers
-  handleItemAdded: (data) => {
-    const { currentTransaction } = get();
-    if (currentTransaction && data.transaction.id === currentTransaction.id) {
-      set({
-        currentTransaction: data.transaction,
-        items: data.transaction.items,
-      });
-    }
-  },
 }));
-
-// Setup socket listeners
-socket.on('item:added', (data) => {
-  useTransactionStore.getState().handleItemAdded(data);
-});
-
-socket.on('item:updated', (data) => {
-  useTransactionStore.getState().handleItemAdded(data);
-});
-
-socket.on('item:removed', (data) => {
-  useTransactionStore.getState().handleItemAdded(data);
-});
 
 export default useTransactionStore;

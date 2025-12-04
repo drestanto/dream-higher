@@ -165,15 +165,12 @@ router.post('/:id/items', async (req, res) => {
       data: { totalAmount },
     });
 
-    // Emit socket event
     const updatedTransaction = await prisma.transaction.findUnique({
       where: { id: transactionId },
       include: {
         items: { include: { product: true } },
       },
     });
-
-    req.io.emit('item:added', { item, transaction: updatedTransaction });
 
     res.status(201).json({ item, transaction: updatedTransaction });
   } catch (error) {
@@ -208,8 +205,6 @@ router.patch('/:id/items/:itemId', async (req, res) => {
       },
     });
 
-    req.io.emit('item:updated', { item, transaction });
-
     res.json({ item, transaction });
   } catch (error) {
     console.error('Error updating item:', error);
@@ -239,8 +234,6 @@ router.delete('/:id/items/:itemId', async (req, res) => {
         items: { include: { product: true } },
       },
     });
-
-    req.io.emit('item:removed', { itemId, transaction });
 
     res.json({ message: 'Item removed', transaction });
   } catch (error) {
@@ -314,12 +307,6 @@ router.post('/:id/complete', async (req, res) => {
       },
     });
 
-    req.io.emit('transaction:completed', {
-      transaction: completedTransaction,
-      kepoGuess,
-      kepoAudioUrl,
-    });
-
     res.json({
       transaction: completedTransaction,
       kepoGuess,
@@ -337,8 +324,6 @@ router.delete('/:id', async (req, res) => {
     await prisma.transaction.delete({
       where: { id: req.params.id },
     });
-
-    req.io.emit('transaction:cancelled', { transactionId: req.params.id });
 
     res.json({ message: 'Transaction cancelled' });
   } catch (error) {

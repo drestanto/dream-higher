@@ -22,7 +22,6 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "prisma": "^5.22.0",
-    "socket.io": "^4.8.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
