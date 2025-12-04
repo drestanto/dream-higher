@@ -62,8 +62,11 @@ export default function ObjectDetectionScanner({
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Resize to 320x240 for faster API processing (reduces network overhead)
+    const targetWidth = 320;
+    const targetHeight = 240;
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
     // Apply mirror if needed
     if (isMirrored) {
@@ -71,13 +74,14 @@ export default function ObjectDetectionScanner({
       ctx.scale(-1, 1);
     }
 
-    ctx.drawImage(video, 0, 0);
+    // Draw video scaled down to target size
+    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
 
     // Reset transform
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    // Get base64 without the data:image/jpeg;base64, prefix
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    // Get base64 without the data:image/jpeg;base64, prefix (quality 0.7)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
     return dataUrl.split(',')[1];
   }, [isMirrored]);
 
@@ -283,8 +287,8 @@ export default function ObjectDetectionScanner({
       setIsScanning(true);
       setError(null);
 
-      // Start detection loop at ~4 FPS (250ms interval)
-      intervalRef.current = setInterval(processDetection, 250);
+      // Start detection loop at ~2 FPS (500ms interval) for better latency
+      intervalRef.current = setInterval(processDetection, 500);
 
     } catch (err) {
       setError(`Gagal mengakses kamera: ${err.message}`);
@@ -296,7 +300,7 @@ export default function ObjectDetectionScanner({
   useEffect(() => {
     if (isScanning && intervalRef.current) {
       clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(processDetection, 250);
+      intervalRef.current = setInterval(processDetection, 500);
     }
   }, [processDetection, isScanning]);
 
