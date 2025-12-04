@@ -33,14 +33,26 @@ export default function ScanPage() {
   const [receipt, setReceipt] = useState(null);
   const [scanMode, setScanMode] = useState('barcode'); // 'barcode' or 'detection'
 
-  // Create transaction on mount
+  // Reset and create new transaction when type changes
   useEffect(() => {
-    if (!currentTransaction) {
-      createTransaction(transactionType);
-    }
+    // Always reset when transaction type changes to ensure clean state
+    const initTransaction = async () => {
+      // If there's an existing transaction with different type, reset first
+      if (currentTransaction && currentTransaction.type !== transactionType) {
+        reset();
+      }
+
+      // Create new transaction if none exists or was just reset
+      if (!currentTransaction || currentTransaction.type !== transactionType) {
+        await createTransaction(transactionType);
+      }
+    };
+
+    initTransaction();
 
     return () => {
-      // Clean up on unmount if transaction is pending
+      // Clean up on unmount - reset the store
+      reset();
     };
   }, [transactionType]);
 
@@ -209,9 +221,14 @@ export default function ScanPage() {
         <div className="flex-1 flex flex-col">
           <div className="relative flex-1 min-h-[300px]">
             {scanMode === 'barcode' ? (
-              <BarcodeScanner onScan={handleScan} isActive={true} />
+              <BarcodeScanner
+                key={`barcode-${transactionType}`}
+                onScan={handleScan}
+                isActive={true}
+              />
             ) : (
               <ObjectDetectionScanner
+                key={`detection-${transactionType}`}
                 onDetect={handleDetection}
                 transactionType={transactionType}
                 isActive={true}
