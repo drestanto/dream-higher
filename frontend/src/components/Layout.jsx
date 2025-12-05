@@ -5,13 +5,15 @@ import {
   PackagePlus,
   History,
   Package,
-  Store
+  Store,
+  PlusCircle,
 } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/scan/out', icon: ScanLine, label: 'Customer Beli' },
   { to: '/scan/in', icon: PackagePlus, label: 'Beli ke Vendor' },
+  { to: '/add-product', icon: PlusCircle, label: 'Tambah Produk' },
   { to: '/history', icon: History, label: 'Riwayat' },
   { to: '/products', icon: Package, label: 'Produk' },
 ];

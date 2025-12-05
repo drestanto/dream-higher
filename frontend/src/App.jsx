@@ -5,6 +5,7 @@ import ScanPage from './pages/ScanPage';
 import History from './pages/History';
 import Products from './pages/Products';
 import ReceiptPage from './pages/ReceiptPage';
+import AddProductPage from './pages/AddProductPage';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="scan/:type" element={<ScanPage />} />
+          <Route path="add-product" element={<AddProductPage />} />
           <Route path="history" element={<History />} />
           <Route path="products" element={<Products />} />
         </Route>
