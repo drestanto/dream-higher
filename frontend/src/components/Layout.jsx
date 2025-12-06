@@ -5,7 +5,6 @@ import {
   PackagePlus,
   History,
   Package,
-  Store,
   PlusCircle,
 } from 'lucide-react';
 
@@ -26,7 +25,7 @@ export default function Layout() {
         {/* Logo */}
         <div className="p-4 border-b">
           <div className="flex items-center gap-2">
-            <Store className="w-8 h-8 text-blue-600" />
+            <img src="/favicon.png" alt="Logo" className="w-8 h-8" />
             <div>
               <h1 className="font-bold text-lg text-gray-800">Dream Higher</h1>
               <p className="text-xs text-gray-500">Warung Tracker</p>

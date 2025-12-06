@@ -52,6 +52,7 @@ coverage/
 *.png
 *.jpg
 *.jpeg
+!icon.png
 
 # Generated audio files
 backend/public/audio/
