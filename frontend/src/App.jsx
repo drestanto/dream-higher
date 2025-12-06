@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import Intro from './pages/Intro';
 import Dashboard from './pages/Dashboard';
 import ScanPage from './pages/ScanPage';
 import History from './pages/History';
@@ -16,11 +17,12 @@ function App() {
 
         {/* Main app with layout */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<Intro />} />
           <Route path="scan/:type" element={<ScanPage />} />
           <Route path="add-product" element={<AddProductPage />} />
           <Route path="history" element={<History />} />
           <Route path="products" element={<Products />} />
+          <Route path="statistik" element={<Dashboard />} />
         </Route>
       </Routes>
     </BrowserRouter>

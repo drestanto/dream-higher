@@ -1,20 +1,26 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard,
+  Home,
   ScanLine,
   PackagePlus,
   History,
   Package,
   PlusCircle,
+  BarChart3,
 } from 'lucide-react';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/scan/out', icon: ScanLine, label: 'Customer Beli' },
-  { to: '/scan/in', icon: PackagePlus, label: 'Beli ke Vendor' },
-  { to: '/add-product', icon: PlusCircle, label: 'Tambah Produk' },
-  { to: '/history', icon: History, label: 'Riwayat' },
-  { to: '/products', icon: Package, label: 'Produk' },
+  // Intro (blue)
+  { to: '/', icon: Home, label: 'Intro', color: 'blue' },
+  // Transaction (green)
+  { to: '/scan/out', icon: ScanLine, label: 'Customer Beli', color: 'green' },
+  { to: '/scan/in', icon: PackagePlus, label: 'Beli ke Vendor', color: 'green' },
+  // Product management (yellow)
+  { to: '/add-product', icon: PlusCircle, label: 'Tambah Produk', color: 'yellow' },
+  { to: '/products', icon: Package, label: 'Produk Terdaftar', color: 'yellow' },
+  // History & stats (orange)
+  { to: '/history', icon: History, label: 'Riwayat', color: 'orange' },
+  { to: '/statistik', icon: BarChart3, label: 'Statistik', color: 'orange' },
 ];
 
 export default function Layout() {
@@ -36,23 +42,31 @@ export default function Layout() {
         {/* Navigation */}
         <nav className="flex-1 p-4">
           <ul className="space-y-2">
-            {navItems.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-600 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`
-                  }
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </NavLink>
-              </li>
-            ))}
+            {navItems.map((item) => {
+              const colorClasses = {
+                blue: { base: 'bg-blue-50 text-blue-600', active: 'bg-blue-100 text-blue-700 ring-2 ring-blue-300' },
+                green: { base: 'bg-green-50 text-green-600', active: 'bg-green-100 text-green-700 ring-2 ring-green-300' },
+                yellow: { base: 'bg-yellow-50 text-yellow-600', active: 'bg-yellow-100 text-yellow-700 ring-2 ring-yellow-300' },
+                orange: { base: 'bg-orange-50 text-orange-600', active: 'bg-orange-100 text-orange-700 ring-2 ring-orange-300' },
+              };
+              const colors = colorClasses[item.color] || colorClasses.blue;
+
+              return (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${colors.base} ${
+                        isActive ? `${colors.active} font-medium` : 'hover:opacity-80'
+                      }`
+                    }
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
