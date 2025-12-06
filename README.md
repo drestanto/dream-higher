@@ -26,11 +26,16 @@ Three ways to add items to a transaction:
 
 ### 4. Receipt System
 - 2-step flow: Summary view → Isolated print page (new tab)
-- Print receipts via browser
+- Print receipts via browser (only for Customer Beli / OUT transactions)
 - Indonesian Rupiah formatting
-- Transaction details with itemized list
+- Transaction details with unit price × quantity = total breakdown
 
-### 5. Manual Quantity Input
+### 5. Add New Products
+- Scan barcode to check if product exists
+- If new barcode → form to add product with buy price, sell price, category
+- Clear explanation of buy price (modal) vs sell price
+
+### 6. Manual Quantity Input
 - Click quantity number to edit directly
 - Supports +/- buttons or manual typing
 - Validates on blur (invalid input reverts)
@@ -140,11 +145,12 @@ dream-higher/
 │   │   │   ├── KepoPopup.jsx           # AI guess popup
 │   │   │   └── Receipt.jsx             # Receipt component
 │   │   ├── pages/
-│   │   │   ├── Dashboard.jsx    # Charts & stats
-│   │   │   ├── ScanPage.jsx     # 3 modes: Barcode, AI, Manual
-│   │   │   ├── ReceiptPage.jsx  # Isolated print page
-│   │   │   ├── History.jsx      # Transaction history
-│   │   │   └── Products.jsx     # Product catalog
+│   │   │   ├── Dashboard.jsx      # Charts & stats
+│   │   │   ├── ScanPage.jsx       # 3 modes: Barcode, AI, Manual
+│   │   │   ├── AddProductPage.jsx # Add new products via scan
+│   │   │   ├── ReceiptPage.jsx    # Isolated print page
+│   │   │   ├── History.jsx        # Transaction history
+│   │   │   └── Products.jsx       # Product catalog
 │   │   ├── stores/
 │   │   │   └── transactionStore.js  # Zustand store
 │   │   ├── services/
