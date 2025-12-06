@@ -123,11 +123,11 @@ export async function generateKepoAudio(text, transactionId) {
     const response = await axios.post(
       'https://api.openai.com/v1/audio/speech',
       {
-        model: 'tts-1',
+        model: 'tts-1', // faster generation, slightly lower quality
         input: text,
-        voice: 'nova', // nova sounds more expressive/dramatic
+        voice: 'shimmer', // shimmer sounds more natural for Indonesian
         response_format: 'mp3',
-        speed: 0.9, // slightly slower for more dramatic effect
+        speed: 1.0, // normal speed for natural flow
       },
       {
         headers: {
