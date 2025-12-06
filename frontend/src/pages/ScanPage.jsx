@@ -310,13 +310,15 @@ export default function ScanPage() {
                 <Home className="w-5 h-5" />
                 <span>Kembali</span>
               </button>
-              <button
-                onClick={handlePrintReceipt}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Printer className="w-5 h-5" />
-                <span>Cetak Struk</span>
-              </button>
+              {transactionType === 'OUT' && (
+                <button
+                  onClick={handlePrintReceipt}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Printer className="w-5 h-5" />
+                  <span>Cetak Struk</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
