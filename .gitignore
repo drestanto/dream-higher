@@ -28,6 +28,7 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # Logs
 *.log
@@ -51,6 +52,9 @@ coverage/
 *.png
 *.jpg
 *.jpeg
+
+# Generated audio files
+backend/public/audio/
 
 # Database
 *.db
