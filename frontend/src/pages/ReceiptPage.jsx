@@ -83,15 +83,17 @@ export default function ReceiptPage() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left pb-2">Item</th>
-                  <th className="text-center pb-2">Qty</th>
                   <th className="text-right pb-2">Harga</th>
+                  <th className="text-center pb-2">Qty</th>
+                  <th className="text-right pb-2">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {receipt.items.map((item, index) => (
                   <tr key={index} className="border-b border-dotted">
                     <td className="py-2 pr-2">{item.name}</td>
-                    <td className="py-2 text-center">x{item.quantity}</td>
+                    <td className="py-2 text-right">{formatRupiah(item.unitPrice)}</td>
+                    <td className="py-2 text-center">×{item.quantity}</td>
                     <td className="py-2 text-right">{formatRupiah(item.total)}</td>
                   </tr>
                 ))}

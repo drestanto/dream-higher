@@ -282,7 +282,7 @@ export default function ScanPage() {
                     <div>
                       <p className="font-medium text-gray-800">{item.name}</p>
                       <p className="text-sm text-gray-500">
-                        {formatRupiah(item.price)} x {item.quantity}
+                        {formatRupiah(item.unitPrice)} × {item.quantity} = {formatRupiah(item.total)}
                       </p>
                     </div>
                     <p className="font-semibold text-gray-800">
