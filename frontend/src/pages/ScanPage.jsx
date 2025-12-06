@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import BarcodeScanner from '../components/BarcodeScanner';
 import ObjectDetectionScanner from '../components/ObjectDetectionScanner';
 import TransactionPanel from '../components/TransactionPanel';
-import KepoPopup from '../components/KepoPopup';
 import useTransactionStore from '../stores/transactionStore';
 import { beep } from '../services/sound';
 import api from '../services/api';
@@ -21,9 +20,6 @@ export default function ScanPage() {
     decreaseItemByBarcode,
     completeTransaction,
     cancelTransaction,
-    kepoGuess,
-    kepoAudioUrl,
-    clearKepo,
     reset,
   } = useTransactionStore();
 
@@ -31,6 +27,11 @@ export default function ScanPage() {
   const [showSummary, setShowSummary] = useState(false); // Step 1: summary view after complete
   const [receipt, setReceipt] = useState(null);
   const [scanMode, setScanMode] = useState('barcode'); // 'barcode', 'detection', or 'manual'
+
+  // Kepo AI generation state
+  const [isGeneratingKepo, setIsGeneratingKepo] = useState(false);
+  const [kepoSentence, setKepoSentence] = useState(null);
+  const [localKepoAudioUrl, setLocalKepoAudioUrl] = useState(null);
 
   // Manual cashier state
   const [products, setProducts] = useState([]);
@@ -157,12 +158,33 @@ export default function ScanPage() {
       // Play complete sound
       beep('complete');
 
-      // Fetch receipt data
+      // Fetch receipt data (without kepo yet)
       if (currentTransaction) {
         const receiptRes = await api.get(`/transactions/${currentTransaction.id}/receipt`);
         setReceipt(receiptRes.data);
         // Show summary first (Step 1), not full receipt yet
         setShowSummary(true);
+
+        // For OUT transactions, start generating kepo in background
+        if (transactionType === 'OUT') {
+          setIsGeneratingKepo(true);
+          setKepoSentence(null);
+          setLocalKepoAudioUrl(null);
+
+          try {
+            const kepoRes = await api.post(`/transactions/${currentTransaction.id}/generate-kepo`);
+            if (kepoRes.data.kepoSentence) {
+              setKepoSentence(kepoRes.data.kepoSentence);
+              setLocalKepoAudioUrl(kepoRes.data.kepoAudioUrl);
+              // Update receipt with kepo sentence
+              setReceipt(prev => ({ ...prev, kepoSentence: kepoRes.data.kepoSentence }));
+            }
+          } catch (kepoError) {
+            console.error('Error generating kepo:', kepoError);
+          } finally {
+            setIsGeneratingKepo(false);
+          }
+        }
       }
     } catch (error) {
       console.error('Error completing transaction:', error);
@@ -191,11 +213,6 @@ export default function ScanPage() {
       reset();
       navigate('/');
     }
-  };
-
-  // Handle close kepo popup
-  const handleCloseKepo = () => {
-    clearKepo();
   };
 
   // Handle manual product click
@@ -300,18 +317,42 @@ export default function ScanPage() {
                 </span>
               </div>
 
-              {/* Kepo Warung Comment */}
-              {receipt.kepoSentence && (
+              {/* Kepo Warung Section - Loader or Sentence */}
+              {transactionType === 'OUT' && (
                 <div className="p-4 border-t bg-gradient-to-r from-yellow-50 to-orange-50">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-xl">
-                      😏
+                  {isGeneratingKepo ? (
+                    /* Loading state */
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-yellow-700 border-t-transparent"></div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-yellow-700 mb-1">Warung Kepo lagi mikir...</p>
+                        <p className="text-xs text-gray-500">Tunggu bentar ya, maksimal 10 detik 😏</p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold text-yellow-700 mb-1">Warung Kepo bilang:</p>
-                      <p className="text-sm text-gray-700 italic">"{receipt.kepoSentence}"</p>
+                  ) : kepoSentence ? (
+                    /* Sentence ready */
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-xl">
+                        😏
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-yellow-700 mb-1">Warung Kepo bilang:</p>
+                        <p className="text-sm text-gray-700 italic">"{kepoSentence}"</p>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* No sentence (fallback/error) */
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-xl">
+                        🤐
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">Warung Kepo lagi istirahat...</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -328,24 +369,21 @@ export default function ScanPage() {
               {transactionType === 'OUT' && (
                 <button
                   onClick={handlePrintReceipt}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={isGeneratingKepo}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg ${
+                    isGeneratingKepo
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
                 >
                   <Printer className="w-5 h-5" />
-                  <span>Cetak Struk</span>
+                  <span>{isGeneratingKepo ? 'Tunggu...' : 'Cetak Struk'}</span>
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Kepo Popup */}
-        {kepoGuess && (
-          <KepoPopup
-            guess={kepoGuess}
-            audioUrl={kepoAudioUrl}
-            onClose={handleCloseKepo}
-          />
-        )}
       </div>
     );
   }
@@ -541,15 +579,6 @@ export default function ScanPage() {
       <div className="w-96 bg-white border-l shadow-lg">
         <TransactionPanel onComplete={handleComplete} onCancel={handleCancel} />
       </div>
-
-      {/* Kepo Popup */}
-      {kepoGuess && (
-        <KepoPopup
-          guess={kepoGuess}
-          audioUrl={kepoAudioUrl}
-          onClose={handleCloseKepo}
-        />
-      )}
 
     </div>
   );

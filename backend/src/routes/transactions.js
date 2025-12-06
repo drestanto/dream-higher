@@ -242,7 +242,7 @@ router.delete('/:id/items/:itemId', async (req, res) => {
   }
 });
 
-// Complete transaction
+// Complete transaction (fast, no AI generation)
 router.post('/:id/complete', async (req, res) => {
   try {
     const transactionId = req.params.id;
@@ -269,36 +269,12 @@ router.post('/:id/complete', async (req, res) => {
       });
     }
 
-    // Kepo Warung - triggers for ALL OUT transactions (more fun!)
-    let kepoGuess = null;
-    let kepoAudioUrl = null;
-
-    if (transaction.type === 'OUT' && transaction.items.length > 0) {
-      const itemNames = transaction.items.map(
-        (i) => `${i.product.name} (${i.quantity})`
-      );
-
-      try {
-        const kepoResult = await generateKepoGuess(itemNames);
-
-        if (kepoResult && kepoResult.sentence) {
-          // New format: { sentence, tts }
-          kepoGuess = JSON.stringify(kepoResult);
-          kepoAudioUrl = await generateKepoAudio(kepoResult.tts, transactionId);
-        }
-      } catch (aiError) {
-        console.error('AI error (non-fatal):', aiError);
-      }
-    }
-
-    // Complete the transaction
+    // Complete the transaction (no AI yet - will be generated separately)
     const completedTransaction = await prisma.transaction.update({
       where: { id: transactionId },
       data: {
         status: 'COMPLETED',
         completedAt: new Date(),
-        kepoGuess,
-        kepoAudioUrl,
       },
       include: {
         items: { include: { product: true } },
@@ -307,12 +283,70 @@ router.post('/:id/complete', async (req, res) => {
 
     res.json({
       transaction: completedTransaction,
-      kepoGuess,
-      kepoAudioUrl,
     });
   } catch (error) {
     console.error('Error completing transaction:', error);
     res.status(500).json({ error: 'Failed to complete transaction' });
+  }
+});
+
+// Generate Kepo AI sentence for a completed transaction
+router.post('/:id/generate-kepo', async (req, res) => {
+  try {
+    const transactionId = req.params.id;
+
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        items: { include: { product: true } },
+      },
+    });
+
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // Only generate for OUT transactions with items
+    if (transaction.type !== 'OUT' || transaction.items.length === 0) {
+      return res.json({ kepoSentence: null, kepoAudioUrl: null });
+    }
+
+    const itemNames = transaction.items.map(
+      (i) => `${i.product.name} (${i.quantity})`
+    );
+
+    let kepoGuess = null;
+    let kepoSentence = null;
+    let kepoAudioUrl = null;
+
+    try {
+      const kepoResult = await generateKepoGuess(itemNames);
+
+      if (kepoResult && kepoResult.sentence) {
+        kepoGuess = JSON.stringify(kepoResult);
+        kepoSentence = kepoResult.sentence;
+        kepoAudioUrl = await generateKepoAudio(kepoResult.tts, transactionId);
+      }
+    } catch (aiError) {
+      console.error('AI error (non-fatal):', aiError);
+    }
+
+    // Update transaction with kepo data
+    await prisma.transaction.update({
+      where: { id: transactionId },
+      data: {
+        kepoGuess,
+        kepoAudioUrl,
+      },
+    });
+
+    res.json({
+      kepoSentence,
+      kepoAudioUrl,
+    });
+  } catch (error) {
+    console.error('Error generating kepo:', error);
+    res.status(500).json({ error: 'Failed to generate kepo' });
   }
 });
 

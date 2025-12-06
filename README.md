@@ -72,49 +72,122 @@ Three ways to add items to a transaction:
 ## Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- npm
-- Kolosal API key (for AI features)
-- OpenAI API key (for TTS - optional)
+- Node.js 18+ ([download](https://nodejs.org/))
+- npm (included with Node.js)
+- Git
+- Kolosal API key (for AI features) - get it at [kolosal.ai](https://kolosal.ai)
+- OpenAI API key (for TTS - optional) - get it at [platform.openai.com](https://platform.openai.com)
 
 ### Installation
 
+#### 1. Clone the repository
+
 ```bash
-# Clone the repository
 git clone https://github.com/yourusername/dream-higher.git
 cd dream-higher
+```
 
-# Backend setup
+#### 2. Setup Environment Variables
+
+**Linux/macOS:**
+```bash
+# Backend
+cp backend/.env.example backend/.env
+
+# Frontend
+cp frontend/.env.example frontend/.env
+```
+
+**Windows (Command Prompt):**
+```cmd
+:: Backend
+copy backend\.env.example backend\.env
+
+:: Frontend
+copy frontend\.env.example frontend\.env
+```
+
+**Windows (PowerShell):**
+```powershell
+# Backend
+Copy-Item backend\.env.example backend\.env
+
+# Frontend
+Copy-Item frontend\.env.example frontend\.env
+```
+
+Then edit `backend/.env` and fill in your API keys:
+- `KOLOSAL_API_KEY` - Required for AI object detection & chat
+- `OPENAI_API_KEY` - Optional, for text-to-speech feature
+
+#### 3. Install Dependencies & Setup Database
+
+**Linux/macOS:**
+```bash
+# Backend
 cd backend
 npm install
 npx prisma db push
 npm run seed
-npm run dev
-# Server runs on http://localhost:3001
 
-# Frontend setup (new terminal)
+# Frontend (new terminal)
 cd frontend
 npm install
-npm run dev
-# App runs on http://localhost:5173
 ```
 
-### Environment Variables
+**Windows (Command Prompt / PowerShell):**
+```cmd
+:: Backend
+cd backend
+npm install
+npx prisma db push
+npm run seed
+
+:: Frontend (new terminal)
+cd frontend
+npm install
+```
+
+#### 4. Run the Application
+
+You need two terminal windows - one for backend, one for frontend.
+
+**Terminal 1 - Backend:**
+
+```bash
+cd backend
+npm run dev
+```
+Server runs on http://localhost:3001
+
+**Terminal 2 - Frontend:**
+
+```bash
+cd frontend
+npm run dev
+```
+App runs on http://localhost:5173
+
+#### 5. Open the App
+
+Open your browser and go to: http://localhost:5173
+
+### Environment Variables Reference
 
 **Backend (`backend/.env`)**
-```bash
-DATABASE_URL="file:./dev.db"
-PORT=3001
-FRONTEND_URL="http://localhost:5173"
-KOLOSAL_API_KEY="your-kolosal-api-key"
-KOLOSAL_API_URL="https://api.kolosal.ai"
-OPENAI_API_KEY="your-openai-api-key"
-```
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | SQLite database path | Yes |
+| `PORT` | Backend server port | Yes |
+| `FRONTEND_URL` | Frontend URL for CORS | Yes |
+| `KOLOSAL_API_KEY` | Kolosal AI API key | Yes (for AI features) |
+| `KOLOSAL_API_URL` | Kolosal API base URL | Yes |
+| `OPENAI_API_KEY` | OpenAI API key for TTS | No (optional) |
 
 **Frontend (`frontend/.env`)**
-```bash
-VITE_API_URL=http://localhost:3001
-```
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `VITE_API_URL` | Backend API URL | Yes |
 
 ## Project Structure
 
