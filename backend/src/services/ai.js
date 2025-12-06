@@ -29,7 +29,7 @@ export async function generateKepoGuess(items) {
     const response = await axios.post(
       `${KOLOSAL_API_URL}/v1/chat/completions`,
       {
-        model: 'gpt-4o-mini',
+        model: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
         messages: [
           {
             role: 'system',
