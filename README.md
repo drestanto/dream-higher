@@ -137,7 +137,7 @@ Three ways to add items to a transaction:
 - **Customer Beli (OUT)** - Selling to customers, uses sell price
 - **Beli ke Vendor (IN)** - Buying from suppliers, uses buy price
 
-### 3. Dashboard & Analytics
+### 3. Statistik & Analytics
 - Daily sales summary with revenue charts
 - Top-selling products visualization
 - Category breakdown (doughnut chart)
@@ -156,6 +156,7 @@ Three ways to add items to a transaction:
 - Text-to-Speech via OpenAI for audio playback
 - Auto-plays when transaction completes (Customer Beli / OUT only)
 - Comments appear on receipt summary and printed receipt
+- Auto-cleanup: audio files deleted after 30 minutes
 
 ### 6. Add New Products
 - Scan barcode to check if product exists
@@ -224,7 +225,8 @@ dream-higher/
 │   │   │   ├── TransactionPanel.jsx    # Right panel
 │   │   │   └── Receipt.jsx             # Receipt component
 │   │   ├── pages/
-│   │   │   ├── Dashboard.jsx      # Charts & stats
+│   │   │   ├── Intro.jsx          # Welcome & guide page
+│   │   │   ├── Dashboard.jsx      # Charts & stats (Statistik)
 │   │   │   ├── ScanPage.jsx       # 3 modes: Barcode, AI, Manual
 │   │   │   ├── AddProductPage.jsx # Add new products via scan
 │   │   │   ├── ReceiptPage.jsx    # Isolated print page
