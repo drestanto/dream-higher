@@ -30,12 +30,19 @@ Three ways to add items to a transaction:
 - Indonesian Rupiah formatting
 - Transaction details with unit price × quantity = total breakdown
 
-### 5. Add New Products
+### 5. Warung Kepo - AI Comment & TTS
+- AI generates annoying "kepo" comments based on purchased items
+- Uses Kolosal Chat Completion for Indonesian-style shopkeeper personality
+- Text-to-Speech via OpenAI for audio playback
+- Auto-plays when transaction completes (Customer Beli / OUT only)
+- Comments appear on receipt summary and printed receipt
+
+### 6. Add New Products
 - Scan barcode to check if product exists
 - If new barcode → form to add product with buy price, sell price, category
 - Clear explanation of buy price (modal) vs sell price
 
-### 6. Manual Quantity Input
+### 7. Manual Quantity Input
 - Click quantity number to edit directly
 - Supports +/- buttons or manual typing
 - Validates on blur (invalid input reverts)
@@ -66,8 +73,8 @@ Three ways to add items to a transaction:
 | Feature | Provider | API |
 |---------|----------|-----|
 | Object Detection | Kolosal | `/v1/segment/base64` |
-| Recipe Guessing (planned) | Kolosal | `/v1/chat/completions` |
-| Text-to-Speech (planned) | OpenAI | `/v1/audio/speech` |
+| Warung Kepo (sentence generation) | Kolosal | `/v1/chat/completions` |
+| Text-to-Speech | OpenAI | `/v1/audio/speech` |
 
 ## Quick Start
 
@@ -215,7 +222,6 @@ dream-higher/
 │   │   │   ├── BarcodeScanner.jsx      # barcode-detector + upload
 │   │   │   ├── ObjectDetectionScanner.jsx  # AI detection
 │   │   │   ├── TransactionPanel.jsx    # Right panel
-│   │   │   ├── KepoPopup.jsx           # AI guess popup
 │   │   │   └── Receipt.jsx             # Receipt component
 │   │   ├── pages/
 │   │   │   ├── Dashboard.jsx      # Charts & stats
@@ -234,8 +240,6 @@ dream-higher/
 │   │   └── index.css            # Tailwind + custom styles
 │   └── package.json
 │
-├── IMPLEMENTATION_PLAN.md
-├── CONTINUE_FROM_HERE.md        # For AI assistants to continue dev
 └── README.md
 ```
 
@@ -261,6 +265,7 @@ dream-higher/
 | PATCH | `/api/transactions/:id/items/:itemId` | Update quantity |
 | DELETE | `/api/transactions/:id/items/:itemId` | Remove item |
 | POST | `/api/transactions/:id/complete` | Complete transaction |
+| POST | `/api/transactions/:id/generate-kepo` | Generate AI comment + TTS |
 | DELETE | `/api/transactions/:id` | Cancel transaction |
 | GET | `/api/transactions/:id/receipt` | Get receipt data |
 
@@ -287,13 +292,6 @@ Categories included in seed data:
 - **Bumbu Dapur** - Kecap, Sambal, Minyak Goreng, etc.
 - **Rokok** - Gudang Garam, Sampoerna, Djarum
 - **Kebutuhan Rumah Tangga** - Rinso, Sunlight, Baygon
-
-## Continuing Development
-
-See `CONTINUE_FROM_HERE.md` for:
-- Current backlog items
-- File structure reference
-- Context for AI assistants
 
 ## Acknowledgments
 
