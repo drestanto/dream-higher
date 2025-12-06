@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../index.js';
 import { readBarcodes } from 'zxing-wasm';
+import { generateDetectionLabel } from '../services/ai.js';
 
 const router = Router();
 
@@ -125,6 +126,17 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { barcode, name, buyPrice, sellPrice, stock, category, imageUrl, lowStockThreshold } = req.body;
+
+    // Auto-generate detection label using Kolosal AI
+    let detectionLabel = null;
+    try {
+      detectionLabel = await generateDetectionLabel(name, category);
+      console.log(`Auto-generated detection label for "${name}": ${detectionLabel || 'none'}`);
+    } catch (aiError) {
+      console.warn('Failed to generate detection label:', aiError.message);
+      // Continue without detection label if AI fails
+    }
+
     const product = await prisma.product.create({
       data: {
         barcode,
@@ -135,6 +147,7 @@ router.post('/', async (req, res) => {
         category,
         imageUrl,
         lowStockThreshold: lowStockThreshold || 5,
+        detectionLabel,
       },
     });
     res.status(201).json(product);

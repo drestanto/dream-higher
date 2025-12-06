@@ -158,6 +158,83 @@ export async function generateKepoAudio(text, transactionId) {
   }
 }
 
+// Generate detection label from product name using Kolosal Chat Completion
+export async function generateDetectionLabel(productName, category) {
+  if (!KOLOSAL_API_KEY) {
+    console.warn('KOLOSAL_API_KEY not set, skipping detection label generation');
+    return null;
+  }
+
+  try {
+    const response = await axios.post(
+      `${KOLOSAL_API_URL}/v1/chat/completions`,
+      {
+        model: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert in COCO (Common Objects in Context) dataset labels. Your task is to determine the best COCO detection label for a product based on its name and category.
+
+COCO DATASET LABELS (80 classes):
+person, bicycle, car, motorcycle, airplane, bus, train, truck, boat, traffic light, fire hydrant, stop sign, parking meter, bench, bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, backpack, umbrella, handbag, tie, suitcase, frisbee, skis, snowboard, sports ball, kite, baseball bat, baseball glove, skateboard, surfboard, tennis racket, bottle, wine glass, cup, fork, knife, spoon, bowl, banana, apple, sandwich, orange, broccoli, carrot, hot dog, pizza, donut, cake, chair, couch, potted plant, bed, dining table, toilet, tv, laptop, mouse, remote, keyboard, cell phone, microwave, oven, toaster, sink, refrigerator, book, clock, vase, scissors, teddy bear, hair drier, toothbrush
+
+RULES:
+1. Return ONLY the most appropriate COCO label from the list above
+2. If the product doesn't match ANY COCO label, return "null"
+3. Choose the most generic label that fits (e.g., "Teh Botol" -> "bottle", not "tea")
+4. Be conservative - if unsure, return "null"
+5. Return ONLY the label string, nothing else
+
+EXAMPLES:
+Input: "Teh Botol Sosro", Category: "Minuman"
+Output: bottle
+
+Input: "Indomie Goreng", Category: "Mie & Bihun"
+Output: null
+
+Input: "Coca Cola 500ml", Category: "Minuman"
+Output: bottle
+
+Input: "Beng Beng", Category: "Makanan Ringan"
+Output: null
+
+Input: "Pisang Cavendish", Category: "Buah"
+Output: banana
+
+Input: "Roti Tawar", Category: "Makanan"
+Output: null`,
+          },
+          {
+            role: 'user',
+            content: `Product Name: "${productName}", Category: "${category}"`,
+          },
+        ],
+        max_tokens: 50,
+        temperature: 0.1,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${KOLOSAL_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const label = response.data.choices?.[0]?.message?.content?.trim().toLowerCase();
+    console.log(`Detection label for "${productName}": ${label}`);
+
+    // Return null if the AI says "null" or if it's empty
+    if (!label || label === 'null' || label === 'none') {
+      return null;
+    }
+
+    return label;
+  } catch (error) {
+    console.error('Error generating detection label:', error.response?.data || error.message);
+    return null;
+  }
+}
+
 // Object detection using Kolosal API
 export async function detectObjects(imageBase64, prompts = ['bottle', 'food', 'snack', 'drink']) {
   if (!KOLOSAL_API_KEY) {

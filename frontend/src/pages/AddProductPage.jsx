@@ -332,6 +332,9 @@ export default function AddProductPage() {
                       </option>
                     ))}
                   </select>
+                  <p className="text-gray-400 text-xs mt-1">
+                    AI akan otomatis menentukan label deteksi untuk produk ini
+                  </p>
                 </div>
 
                 {/* Price explanation */}

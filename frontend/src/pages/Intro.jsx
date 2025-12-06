@@ -5,7 +5,7 @@ export default function Intro() {
   const navigate = useNavigate();
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="h-full overflow-auto p-6 max-w-4xl mx-auto">
       <div className="text-center mb-8">
         <img src="/favicon.png" alt="Logo" className="w-16 h-16 mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Selamat Datang di Warung Kepo!</h1>

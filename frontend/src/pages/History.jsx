@@ -31,27 +31,25 @@ function formatDate(dateString) {
 export default function History() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [filters, setFilters] = useState({ type: '' });
   const [collapsedIds, setCollapsedIds] = useState(new Set());
+  const [collapsedSections, setCollapsedSections] = useState(new Set());
 
   useEffect(() => {
     fetchTransactions();
-  }, [pagination.page, filters]);
+  }, [filters]);
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        page: pagination.page,
-        limit: 50,
+        limit: 1000, // Get all transactions
         status: 'COMPLETED',
         ...filters,
       });
 
       const response = await api.get(`/transactions?${params}`);
       setTransactions(response.data.transactions);
-      setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching transactions:', error);
     } finally {
@@ -71,6 +69,18 @@ export default function History() {
     });
   };
 
+  const toggleSection = (section) => {
+    setCollapsedSections((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(section)) {
+        newSet.delete(section);
+      } else {
+        newSet.add(section);
+      }
+      return newSet;
+    });
+  };
+
   // Group transactions by type
   const groupedTransactions = {
     OUT: transactions.filter((t) => t.type === 'OUT'),
@@ -84,7 +94,7 @@ export default function History() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Riwayat Transaksi</h1>
           <p className="text-gray-500">
-            Total: {pagination.total} transaksi
+            Total: {transactions.length} transaksi
           </p>
         </div>
 
@@ -112,23 +122,31 @@ export default function History() {
           <p>Belum ada transaksi</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Penjualan Group */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-[calc(100vh-12rem)]">
+          {/* Penjualan Column */}
           {!filters.type || filters.type === 'OUT' ? (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 flex flex-col min-h-0 h-1/2 lg:h-auto bg-green-50/30 rounded-xl border-2 border-green-200 p-4">
+              <button
+                onClick={() => toggleSection('OUT')}
+                className="flex items-center gap-2 mb-3 w-full hover:bg-green-100/50 p-3 rounded-lg transition-colors bg-white shadow-sm"
+              >
                 <div className="p-2 rounded-lg bg-green-100 text-green-600">
                   <ArrowUpCircle className="w-5 h-5" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-800">
+                <h2 className="text-lg font-semibold text-gray-800 flex-1 text-left">
                   Penjualan ({groupedTransactions.OUT.length})
                 </h2>
-              </div>
+                {collapsedSections.has('OUT') ? (
+                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
 
-              {groupedTransactions.OUT.length === 0 ? (
+              {!collapsedSections.has('OUT') && (groupedTransactions.OUT.length === 0 ? (
                 <p className="text-gray-500 text-sm ml-11">Belum ada transaksi penjualan</p>
               ) : (
-                <div className="space-y-2 ml-0 md:ml-11">
+                <div className="space-y-2 overflow-y-auto flex-1 pr-2">
                   {groupedTransactions.OUT.map((tx) => (
                     <div key={tx.id} className="bg-white rounded-lg shadow-sm border">
                       {/* Transaction Header */}
@@ -194,26 +212,34 @@ export default function History() {
                     </div>
                   ))}
                 </div>
-              )}
+              ))}
             </div>
           ) : null}
 
-          {/* Pembelian Group */}
+          {/* Pembelian Column */}
           {!filters.type || filters.type === 'IN' ? (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 flex flex-col min-h-0 h-1/2 lg:h-auto bg-blue-50/30 rounded-xl border-2 border-blue-200 p-4">
+              <button
+                onClick={() => toggleSection('IN')}
+                className="flex items-center gap-2 mb-3 w-full hover:bg-blue-100/50 p-3 rounded-lg transition-colors bg-white shadow-sm"
+              >
                 <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
                   <ArrowDownCircle className="w-5 h-5" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-800">
+                <h2 className="text-lg font-semibold text-gray-800 flex-1 text-left">
                   Pembelian ({groupedTransactions.IN.length})
                 </h2>
-              </div>
+                {collapsedSections.has('IN') ? (
+                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
 
-              {groupedTransactions.IN.length === 0 ? (
+              {!collapsedSections.has('IN') && (groupedTransactions.IN.length === 0 ? (
                 <p className="text-gray-500 text-sm ml-11">Belum ada transaksi pembelian</p>
               ) : (
-                <div className="space-y-2 ml-0 md:ml-11">
+                <div className="space-y-2 overflow-y-auto flex-1 pr-2">
                   {groupedTransactions.IN.map((tx) => (
                     <div key={tx.id} className="bg-white rounded-lg shadow-sm border">
                       {/* Transaction Header */}
@@ -263,32 +289,9 @@ export default function History() {
                     </div>
                   ))}
                 </div>
-              )}
+              ))}
             </div>
           ) : null}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {pagination.pages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
-          <button
-            onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
-            disabled={pagination.page === 1}
-            className="px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-          >
-            Prev
-          </button>
-          <span className="px-4 py-2 text-gray-600">
-            {pagination.page} / {pagination.pages}
-          </span>
-          <button
-            onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-            disabled={pagination.page === pagination.pages}
-            className="px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-          >
-            Next
-          </button>
         </div>
       )}
     </div>
