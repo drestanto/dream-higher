@@ -9,11 +9,18 @@ const KOLOSAL_API_URL = process.env.KOLOSAL_API_URL || 'https://api.kolosal.ai';
 const KOLOSAL_API_KEY = process.env.KOLOSAL_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Fallback kepo sentences when AI fails
+const FALLBACK_KEPO = [
+  { sentence: "Belanja nih? Oke deh, semoga duitnya cukup ya!", tts: "Belanja niiiih? (nada kepo) Oke deeeh, semoga duitnya cukuuup yaaaa! (nada nyindir)" },
+  { sentence: "Wah rajin belanja, dompetnya tebel nih kayaknya!", tts: "Waaaah rajin belanjaaaa (kagum palsu), dompetnya tebel nih kayaknyaaaa! (nada iri)" },
+  { sentence: "Makasih udah belanja, jangan lupa balik lagi ya!", tts: "Makasiiih udah belanjaaaa (nada males), jangan lupa balik lagi yaaaa! (nada maksa)" },
+];
+
 // Generate Kepo guess using Kolosal Chat Completion
 export async function generateKepoGuess(items) {
   if (!KOLOSAL_API_KEY) {
-    console.warn('KOLOSAL_API_KEY not set, skipping kepo guess');
-    return null;
+    console.warn('KOLOSAL_API_KEY not set, using fallback');
+    return FALLBACK_KEPO[Math.floor(Math.random() * FALLBACK_KEPO.length)];
   }
 
   try {
@@ -26,33 +33,47 @@ export async function generateKepoGuess(items) {
         messages: [
           {
             role: 'system',
-            content: `Kamu adalah penjaga warung Indonesia yang kepo dan suka nebak-nebak masakan.
-Berdasarkan barang yang dibeli, tebak mau masak/bikin apa.
+            content: `Kamu adalah penjaga warung Indonesia yang SUPER KEPO, NYINYIR, dan NGESELIN. Kamu suka banget nebak-nebak dan nyindir customer.
+
+PERSONALITY:
+- Kepo parah, selalu pengen tau mau ngapain
+- Nyinyir, suka nyindir halus tapi lucu
+- Gaul, pake bahasa anak muda Jakarta (lu/gue, dong, kali, mah, anjir, wkwk)
+- Suka kasih backhanded compliment
+- Kadang salah nebak tapi pede aja
+
+OUTPUT FORMAT (JSON):
+{
+  "sentence": "kalimat singkat yang akan ditampilkan",
+  "tts": "kalimat dengan panduan prosodi untuk text-to-speech"
+}
+
+PANDUAN TTS:
+- Tambah huruf vokal untuk penekanan (misal: "tuuuh", "bangeeet")
+- Tambah keterangan nada dalam kurung: (nada kepo), (nada nyindir), (nada ngejek), (nada kaget), (nada iri), (bernada ngejek)
+- Buat terdengar annoying tapi lucu
+
+CONTOH OUTPUT:
+{"sentence":"Mau ngapain tuh? Gambar-gambar di laptop? Udah kayak artis lu!","tts":"Mau ngapain tuuuh? (nada kepo) Gambar-gambar di laptop? (nada heran) Udaaah kayak artiiis luuu! (nada ngejek)"}
+{"sentence":"Mentega buat apa? Martabak? Mending pake Wisman. Oh, ga cukup ya uangnya?","tts":"Mentega buat apaaaa? (nada kepo) Martabak? Mending pake Wismaaan. (nada sok tau) Ohhh, ga cukup ya uangnyaaa? (nada nyindir)"}
+{"sentence":"Lima Indomie? Diet anak kos nih ye, sehat-sehat ya!","tts":"Lima Indomieeee? (nada kaget) Diet anak kos nih yeeee (ngejek), sehat-sehat yaaaa! (nada sok perhatian)"}
+{"sentence":"Beli sabun sama shampoo? Tumben mandi, ada yang mau ditembak?","tts":"Beli sabun sama shampoooo? (nada heran) Tumben mandiii (nyindir), ada yang mau ditembaaak? (nada godain)"}
+{"sentence":"Rokok sama kopi doang? Healing ala bapak-bapak banget dah...","tts":"Rokok sama kopi doaaang? (nada males) Healing ala bapak-bapak banget daaah... (nada judging)"}
 
 RULES:
-- Jawab HANYA jika kamu yakin ada resep yang cocok
-- Jika tidak yakin atau barang tidak berhubungan dengan masakan, jawab HANYA dengan kata: NULL
-- Jika yakin, jawab dengan gaya bahasa Indonesia santai, kepo, sedikit annoying
-- Maksimal 1-2 kalimat pendek
-- Boleh pakai "mas", "mbak", "bang", "kak" secara random
-- JANGAN gunakan emoji
-
-Contoh jawaban VALID:
-- "Wah mau bikin bolu ya mas? Enak tuh!"
-- "Nasi goreng nih pasti! Jangan lupa kerupuknya bang!"
-- "Martabak manis kayaknya, buat pacar ya mbak?"
-- "Banyak indomie, anak kos ya kak?"
-
-Contoh jawaban jika TIDAK YAKIN:
-- NULL`,
+- HANYA output JSON valid, tidak ada text lain
+- Sentence maksimal 1-2 kalimat pendek
+- JANGAN pakai emoji
+- Selalu kreatif dan beda tiap response
+- Boleh nebak salah buat lucu-lucuan`,
           },
           {
             role: 'user',
             content: `Barang dibeli: ${itemList}`,
           },
         ],
-        max_tokens: 100,
-        temperature: 0.8,
+        max_tokens: 200,
+        temperature: 0.9,
       },
       {
         headers: {
@@ -62,13 +83,24 @@ Contoh jawaban jika TIDAK YAKIN:
       }
     );
 
-    const guess = response.data.choices?.[0]?.message?.content?.trim();
-    console.log('Kepo guess:', guess);
+    const rawResponse = response.data.choices?.[0]?.message?.content?.trim();
+    console.log('Kepo raw response:', rawResponse);
 
-    return guess;
+    // Parse JSON response
+    try {
+      const parsed = JSON.parse(rawResponse);
+      if (parsed.sentence && parsed.tts) {
+        return parsed;
+      }
+    } catch (parseError) {
+      console.error('Failed to parse kepo JSON, using fallback');
+    }
+
+    // Fallback if parsing fails
+    return FALLBACK_KEPO[Math.floor(Math.random() * FALLBACK_KEPO.length)];
   } catch (error) {
     console.error('Error generating kepo guess:', error.response?.data || error.message);
-    return null;
+    return FALLBACK_KEPO[Math.floor(Math.random() * FALLBACK_KEPO.length)];
   }
 }
 
@@ -85,8 +117,9 @@ export async function generateKepoAudio(text, transactionId) {
       {
         model: 'tts-1',
         input: text,
-        voice: 'alloy',
+        voice: 'nova', // nova sounds more expressive/dramatic
         response_format: 'mp3',
+        speed: 0.9, // slightly slower for more dramatic effect
       },
       {
         headers: {

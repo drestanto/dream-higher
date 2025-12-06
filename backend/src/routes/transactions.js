@@ -269,24 +269,22 @@ router.post('/:id/complete', async (req, res) => {
       });
     }
 
-    // Get unique item count for Kepo trigger
-    const uniqueItemCount = transaction.items.length;
+    // Kepo Warung - triggers for ALL OUT transactions (more fun!)
     let kepoGuess = null;
     let kepoAudioUrl = null;
 
-    // Trigger Kepo Warung if 5+ unique items and OUT transaction
-    if (uniqueItemCount >= 5 && transaction.type === 'OUT') {
+    if (transaction.type === 'OUT' && transaction.items.length > 0) {
       const itemNames = transaction.items.map(
         (i) => `${i.product.name} (${i.quantity})`
       );
 
       try {
-        kepoGuess = await generateKepoGuess(itemNames);
+        const kepoResult = await generateKepoGuess(itemNames);
 
-        if (kepoGuess && kepoGuess !== 'NULL') {
-          kepoAudioUrl = await generateKepoAudio(kepoGuess, transactionId);
-        } else {
-          kepoGuess = null;
+        if (kepoResult && kepoResult.sentence) {
+          // New format: { sentence, tts }
+          kepoGuess = JSON.stringify(kepoResult);
+          kepoAudioUrl = await generateKepoAudio(kepoResult.tts, transactionId);
         }
       } catch (aiError) {
         console.error('AI error (non-fatal):', aiError);
@@ -346,6 +344,18 @@ router.get('/:id/receipt', async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
+    // Parse kepo guess if exists
+    let kepoSentence = null;
+    if (transaction.kepoGuess) {
+      try {
+        const parsed = JSON.parse(transaction.kepoGuess);
+        kepoSentence = parsed.sentence;
+      } catch {
+        // Old format - just use as is
+        kepoSentence = transaction.kepoGuess;
+      }
+    }
+
     const receipt = {
       shopName: 'WARUNG DREAM HIGHER',
       address: 'Jl. Dream Higher Hackathon Imphnen X Kolosal',
@@ -359,6 +369,7 @@ router.get('/:id/receipt', async (req, res) => {
         total: item.quantity * item.unitPrice,
       })),
       total: transaction.totalAmount,
+      kepoSentence, // AI's annoying comment
     };
 
     res.json(receipt);

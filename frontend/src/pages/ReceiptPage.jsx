@@ -102,10 +102,18 @@ export default function ReceiptPage() {
           </div>
 
           {/* Total */}
-          <div className="flex justify-between items-center font-bold text-lg mb-6">
+          <div className="flex justify-between items-center font-bold text-lg mb-4">
             <span>TOTAL</span>
             <span>Rp {formatRupiah(receipt.total)}</span>
           </div>
+
+          {/* Kepo Warung Comment */}
+          {receipt.kepoSentence && (
+            <div className="border border-dashed rounded-lg p-3 mb-4 bg-gray-50">
+              <p className="text-xs text-center text-gray-500 mb-1">💬 Warung Kepo:</p>
+              <p className="text-xs text-center italic text-gray-700">"{receipt.kepoSentence}"</p>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="text-center text-xs text-gray-500 border-t border-dashed pt-4">

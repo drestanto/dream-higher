@@ -299,6 +299,21 @@ export default function ScanPage() {
                   {formatRupiah(receipt.total)}
                 </span>
               </div>
+
+              {/* Kepo Warung Comment */}
+              {receipt.kepoSentence && (
+                <div className="p-4 border-t bg-gradient-to-r from-yellow-50 to-orange-50">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-xl">
+                      😏
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-yellow-700 mb-1">Warung Kepo bilang:</p>
+                      <p className="text-sm text-gray-700 italic">"{receipt.kepoSentence}"</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action buttons */}
