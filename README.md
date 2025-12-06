@@ -2,80 +2,6 @@
 
 A smart financial transaction tracking app for small shops (warung) with barcode scanning, AI object detection, and manual cashier system.
 
-## Features
-
-### 1. Multi-Mode Transaction Input
-Three ways to add items to a transaction:
-
-| Mode | Description |
-|------|-------------|
-| **Barcode Scanner** | Live camera scanning using ZXing-based detector |
-| **AI Object Detection** | Kolosal AI detects products via camera movement (dalam → luar = jual, luar → dalam = beli) |
-| **Manual Cashier** | Click product cards from a searchable grid |
-
-### 2. Transaction Types
-- **Customer Beli (OUT)** - Selling to customers, uses sell price
-- **Beli ke Vendor (IN)** - Buying from suppliers, uses buy price
-
-### 3. Dashboard & Analytics
-- Daily sales summary with revenue charts
-- Top-selling products visualization
-- Category breakdown (doughnut chart)
-- Low stock alerts (rule-based threshold)
-- Transaction history with filters
-
-### 4. Receipt System
-- 2-step flow: Summary view → Isolated print page (new tab)
-- Print receipts via browser (only for Customer Beli / OUT transactions)
-- Indonesian Rupiah formatting
-- Transaction details with unit price × quantity = total breakdown
-
-### 5. Warung Kepo - AI Comment & TTS
-- AI generates annoying "kepo" comments based on purchased items
-- Uses Kolosal Chat Completion for Indonesian-style shopkeeper personality
-- Text-to-Speech via OpenAI for audio playback
-- Auto-plays when transaction completes (Customer Beli / OUT only)
-- Comments appear on receipt summary and printed receipt
-
-### 6. Add New Products
-- Scan barcode to check if product exists
-- If new barcode → form to add product with buy price, sell price, category
-- Clear explanation of buy price (modal) vs sell price
-
-### 7. Manual Quantity Input
-- Click quantity number to edit directly
-- Supports +/- buttons or manual typing
-- Validates on blur (invalid input reverts)
-
-## Tech Stack
-
-### Backend
-- **Runtime:** Node.js 18+
-- **Framework:** Express.js
-- **Database:** SQLite + Prisma ORM
-
-### Frontend
-- **Framework:** React 19 + Vite
-- **Styling:** Tailwind CSS
-- **State:** Zustand
-- **Charts:** Chart.js + react-chartjs-2
-- **Icons:** Lucide React
-
-### Barcode Scanning
-| Mode | Technology | Description |
-|------|------------|-------------|
-| Live Camera | `barcode-detector` (ponyfill) | Real-time scanning via browser camera using ZXing-based polyfill |
-| Image Upload | `zxing-wasm` (backend) | Upload photo to backend for processing, more reliable for small/blurry barcodes |
-
-**Supported formats:** EAN-13, EAN-8, UPC-A, UPC-E, Code-128, Code-39, Code-93, ITF, QR Code
-
-### AI Services
-| Feature | Provider | API |
-|---------|----------|-----|
-| Object Detection | Kolosal | `/v1/segment/base64` |
-| Warung Kepo (sentence generation) | Kolosal | `/v1/chat/completions` |
-| Text-to-Speech | OpenAI | `/v1/audio/speech` |
-
 ## Quick Start
 
 ### Prerequisites
@@ -195,6 +121,80 @@ Open your browser and go to: http://localhost:5173
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `VITE_API_URL` | Backend API URL | Yes |
+
+## Features
+
+### 1. Multi-Mode Transaction Input
+Three ways to add items to a transaction:
+
+| Mode | Description |
+|------|-------------|
+| **Barcode Scanner** | Live camera scanning using ZXing-based detector |
+| **AI Object Detection** | Kolosal AI detects products via camera movement (dalam → luar = jual, luar → dalam = beli) |
+| **Manual Cashier** | Click product cards from a searchable grid |
+
+### 2. Transaction Types
+- **Customer Beli (OUT)** - Selling to customers, uses sell price
+- **Beli ke Vendor (IN)** - Buying from suppliers, uses buy price
+
+### 3. Dashboard & Analytics
+- Daily sales summary with revenue charts
+- Top-selling products visualization
+- Category breakdown (doughnut chart)
+- Low stock alerts (rule-based threshold)
+- Transaction history with filters
+
+### 4. Receipt System
+- 2-step flow: Summary view → Isolated print page (new tab)
+- Print receipts via browser (only for Customer Beli / OUT transactions)
+- Indonesian Rupiah formatting
+- Transaction details with unit price × quantity = total breakdown
+
+### 5. Warung Kepo - AI Comment & TTS
+- AI generates annoying "kepo" comments based on purchased items
+- Uses Kolosal Chat Completion for Indonesian-style shopkeeper personality
+- Text-to-Speech via OpenAI for audio playback
+- Auto-plays when transaction completes (Customer Beli / OUT only)
+- Comments appear on receipt summary and printed receipt
+
+### 6. Add New Products
+- Scan barcode to check if product exists
+- If new barcode → form to add product with buy price, sell price, category
+- Clear explanation of buy price (modal) vs sell price
+
+### 7. Manual Quantity Input
+- Click quantity number to edit directly
+- Supports +/- buttons or manual typing
+- Validates on blur (invalid input reverts)
+
+## Tech Stack
+
+### Backend
+- **Runtime:** Node.js 18+
+- **Framework:** Express.js
+- **Database:** SQLite + Prisma ORM
+
+### Frontend
+- **Framework:** React 19 + Vite
+- **Styling:** Tailwind CSS
+- **State:** Zustand
+- **Charts:** Chart.js + react-chartjs-2
+- **Icons:** Lucide React
+
+### Barcode Scanning
+| Mode | Technology | Description |
+|------|------------|-------------|
+| Live Camera | `barcode-detector` (ponyfill) | Real-time scanning via browser camera using ZXing-based polyfill |
+| Image Upload | `zxing-wasm` (backend) | Upload photo to backend for processing, more reliable for small/blurry barcodes |
+
+**Supported formats:** EAN-13, EAN-8, UPC-A, UPC-E, Code-128, Code-39, Code-93, ITF, QR Code
+
+### AI Services
+| Feature | Provider | API |
+|---------|----------|-----|
+| Object Detection | Kolosal | `/v1/segment/base64` |
+| Warung Kepo (sentence generation) | Kolosal | `/v1/chat/completions` |
+| Text-to-Speech | OpenAI | `/v1/audio/speech` |
 
 ## Project Structure
 
