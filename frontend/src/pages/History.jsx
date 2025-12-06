@@ -122,7 +122,7 @@ export default function History() {
           <p>Belum ada transaksi</p>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-[calc(100vh-12rem)]">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-[calc(100vh-10rem)]">
           {/* Penjualan Column */}
           {!filters.type || filters.type === 'OUT' ? (
             <div className="flex-1 flex flex-col min-h-0 h-1/2 lg:h-auto bg-green-50/30 rounded-xl border-2 border-green-200 p-4">

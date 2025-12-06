@@ -45,7 +45,7 @@ export default function Layout() {
       {/* Overlay for mobile */}
       {isSidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          className="lg:hidden fixed inset-0 backdrop-blur-sm bg-white/30 z-30"
           onClick={closeSidebar}
         />
       )}
