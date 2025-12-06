@@ -50,6 +50,8 @@ export default function Dashboard() {
   const [categories, setCategories] = useState([]);
   const [lowStock, setLowStock] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedCard, setExpandedCard] = useState(null);
+  const [weeklyData, setWeeklyData] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -57,12 +59,13 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [summaryRes, revenueRes, topRes, catRes, lowRes] = await Promise.all([
+      const [summaryRes, revenueRes, topRes, catRes, lowRes, weeklyRes] = await Promise.all([
         api.get('/analytics/summary?period=today'),
         api.get('/analytics/revenue'),
         api.get('/analytics/top-products?limit=5'),
         api.get('/analytics/categories'),
         api.get('/analytics/low-stock'),
+        api.get('/analytics/summary?period=week'),
       ]);
 
       setSummary(summaryRes.data);
@@ -70,11 +73,20 @@ export default function Dashboard() {
       setTopProducts(topRes.data);
       setCategories(catRes.data);
       setLowStock(lowRes.data);
+      setWeeklyData(weeklyRes.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCardClick = (cardType) => {
+    setExpandedCard(expandedCard === cardType ? null : cardType);
+  };
+
+  const closeModal = () => {
+    setExpandedCard(null);
   };
 
   const revenueChartData = {
@@ -144,15 +156,19 @@ export default function Dashboard() {
         <p className="text-gray-500">Ringkasan aktivitas warung hari ini</p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Clickable */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
+        <div
+          onClick={() => handleCardClick('sales')}
+          className="bg-white rounded-xl shadow-sm p-5 border cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Penjualan Hari Ini</p>
               <p className="text-2xl font-bold text-gray-800">
                 {formatRupiah(summary?.totalSales || 0)}
               </p>
+              <p className="text-xs text-gray-400 mt-1">Klik untuk detail 7 hari</p>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
               <TrendingUp className="w-6 h-6 text-green-600" />
@@ -160,13 +176,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
+        <div
+          onClick={() => handleCardClick('purchases')}
+          className="bg-white rounded-xl shadow-sm p-5 border cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Pembelian Stok</p>
               <p className="text-2xl font-bold text-gray-800">
                 {formatRupiah(summary?.totalPurchases || 0)}
               </p>
+              <p className="text-xs text-gray-400 mt-1">Klik untuk detail 7 hari</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-lg">
               <ShoppingCart className="w-6 h-6 text-blue-600" />
@@ -174,13 +194,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
+        <div
+          onClick={() => handleCardClick('profit')}
+          className="bg-white rounded-xl shadow-sm p-5 border cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Profit Bersih</p>
               <p className="text-2xl font-bold text-gray-800">
                 {formatRupiah(summary?.netProfit || 0)}
               </p>
+              <p className="text-xs text-gray-400 mt-1">Klik untuk detail 7 hari</p>
             </div>
             <div className="p-3 bg-purple-100 rounded-lg">
               <DollarSign className="w-6 h-6 text-purple-600" />
@@ -202,6 +226,69 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Modal for 7-day breakdown */}
+      {expandedCard && weeklyData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={closeModal}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">
+                {expandedCard === 'sales' && 'Penjualan 7 Hari Terakhir'}
+                {expandedCard === 'purchases' && 'Pembelian 7 Hari Terakhir'}
+                {expandedCard === 'profit' && 'Profit 7 Hari Terakhir'}
+              </h3>
+              <button
+                onClick={closeModal}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Total (7 hari)</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {expandedCard === 'sales' && formatRupiah(weeklyData?.totalSales || 0)}
+                  {expandedCard === 'purchases' && formatRupiah(weeklyData?.totalPurchases || 0)}
+                  {expandedCard === 'profit' && formatRupiah(weeklyData?.netProfit || 0)}
+                </p>
+              </div>
+
+              <div className="border-t pt-3">
+                <p className="text-xs text-gray-500 mb-2 font-medium">BREAKDOWN HARIAN</p>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {revenue.slice(-7).map((day) => {
+                    const date = new Date(day.date);
+                    const dayName = date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+
+                    return (
+                      <div key={day.date} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        <span className="text-sm text-gray-700">{dayName}</span>
+                        <span className="text-sm font-semibold text-gray-800">
+                          {expandedCard === 'sales' && formatRupiah(day.revenue || 0)}
+                          {expandedCard === 'purchases' && formatRupiah(day.purchases || 0)}
+                          {expandedCard === 'profit' && formatRupiah(day.profit || 0)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t">
+                <p className="text-xs text-gray-500">
+                  {expandedCard === 'sales' && `Total ${weeklyData?.salesCount || 0} transaksi penjualan`}
+                  {expandedCard === 'purchases' && `Total ${weeklyData?.purchaseCount || 0} transaksi pembelian`}
+                  {expandedCard === 'profit' && `Dari ${weeklyData?.salesCount || 0} transaksi penjualan`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

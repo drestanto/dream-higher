@@ -40,17 +40,45 @@ body {
 
 /* Print styles for receipt */
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hide everything except receipt */
   body * {
     visibility: hidden;
   }
+
+  /* Show only receipt content */
   .receipt-print,
   .receipt-print * {
     visibility: visible;
   }
+
   .receipt-print {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
+    width: 80mm;
+    background: white;
+  }
+
+  /* Clean print - no shadows or backgrounds */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Ensure fonts render well */
+  body {
+    font-family: 'Courier New', monospace;
   }
 }

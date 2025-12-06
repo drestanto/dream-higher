@@ -6,6 +6,7 @@ import {
   ChevronUp,
   ArrowUpCircle,
   ArrowDownCircle,
+  Minus,
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -31,8 +32,8 @@ export default function History() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
-  const [filters, setFilters] = useState({ type: '', status: 'COMPLETED' });
-  const [expandedId, setExpandedId] = useState(null);
+  const [filters, setFilters] = useState({ type: '' });
+  const [collapsedIds, setCollapsedIds] = useState(new Set());
 
   useEffect(() => {
     fetchTransactions();
@@ -43,7 +44,8 @@ export default function History() {
     try {
       const params = new URLSearchParams({
         page: pagination.page,
-        limit: 20,
+        limit: 50,
+        status: 'COMPLETED',
         ...filters,
       });
 
@@ -57,14 +59,28 @@ export default function History() {
     }
   };
 
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
+  const toggleCollapse = (id) => {
+    setCollapsedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Group transactions by type
+  const groupedTransactions = {
+    OUT: transactions.filter((t) => t.type === 'OUT'),
+    IN: transactions.filter((t) => t.type === 'IN'),
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Riwayat Transaksi</h1>
           <p className="text-gray-500">
@@ -77,21 +93,11 @@ export default function History() {
           <select
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-            className="px-3 py-2 border rounded-lg bg-white text-gray-700"
+            className="px-3 py-2 border rounded-lg bg-white text-gray-700 text-sm md:text-base"
           >
             <option value="">Semua Tipe</option>
-            <option value="OUT">Penjualan (OUT)</option>
-            <option value="IN">Pembelian (IN)</option>
-          </select>
-
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="px-3 py-2 border rounded-lg bg-white text-gray-700"
-          >
-            <option value="">Semua Status</option>
-            <option value="COMPLETED">Selesai</option>
-            <option value="PENDING">Pending</option>
+            <option value="OUT">Penjualan</option>
+            <option value="IN">Pembelian</option>
           </select>
         </div>
       </div>
@@ -106,112 +112,160 @@ export default function History() {
           <p>Belum ada transaksi</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {transactions.map((tx) => (
-            <div
-              key={tx.id}
-              className="bg-white rounded-lg shadow-sm border overflow-hidden"
-            >
-              {/* Transaction Header */}
-              <div
-                className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
-                onClick={() => toggleExpand(tx.id)}
-              >
-                <div className="flex items-center gap-4">
-                  {/* Type Icon */}
-                  <div
-                    className={`p-2 rounded-lg ${
-                      tx.type === 'OUT'
-                        ? 'bg-green-100 text-green-600'
-                        : 'bg-blue-100 text-blue-600'
-                    }`}
-                  >
-                    {tx.type === 'OUT' ? (
-                      <ArrowUpCircle className="w-5 h-5" />
-                    ) : (
-                      <ArrowDownCircle className="w-5 h-5" />
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-800">
-                        {tx.type === 'OUT' ? 'Penjualan' : 'Pembelian'}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 text-xs rounded-full ${
-                          tx.status === 'COMPLETED'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}
-                      >
-                        {tx.status === 'COMPLETED' ? 'Selesai' : 'Pending'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                      {formatDate(tx.completedAt || tx.createdAt)} • {tx.items?.length || 0} item
-                    </p>
-                  </div>
+        <div className="space-y-6">
+          {/* Penjualan Group */}
+          {!filters.type || filters.type === 'OUT' ? (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-2 rounded-lg bg-green-100 text-green-600">
+                  <ArrowUpCircle className="w-5 h-5" />
                 </div>
-
-                {/* Amount and expand */}
-                <div className="flex items-center gap-4">
-                  <span className="font-semibold text-lg text-gray-800">
-                    {formatRupiah(tx.totalAmount)}
-                  </span>
-                  {expandedId === tx.id ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
-                </div>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Penjualan ({groupedTransactions.OUT.length})
+                </h2>
               </div>
 
-              {/* Expanded Details */}
-              {expandedId === tx.id && (
-                <div className="border-t p-4 bg-gray-50">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-gray-500">
-                        <th className="text-left pb-2">Produk</th>
-                        <th className="text-center pb-2">Qty</th>
-                        <th className="text-right pb-2">Harga</th>
-                        <th className="text-right pb-2">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tx.items?.map((item) => (
-                        <tr key={item.id} className="border-t border-gray-200">
-                          <td className="py-2 text-gray-800">
-                            {item.product?.name || 'Unknown'}
-                          </td>
-                          <td className="py-2 text-center text-gray-600">
-                            x{item.quantity}
-                          </td>
-                          <td className="py-2 text-right text-gray-600">
-                            {formatRupiah(item.unitPrice)}
-                          </td>
-                          <td className="py-2 text-right font-medium text-gray-800">
-                            {formatRupiah(item.unitPrice * item.quantity)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {groupedTransactions.OUT.length === 0 ? (
+                <p className="text-gray-500 text-sm ml-11">Belum ada transaksi penjualan</p>
+              ) : (
+                <div className="space-y-2 ml-0 md:ml-11">
+                  {groupedTransactions.OUT.map((tx) => (
+                    <div key={tx.id} className="bg-white rounded-lg shadow-sm border">
+                      {/* Transaction Header */}
+                      <div className="p-3 md:p-4 flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-base md:text-lg text-gray-800">
+                              {formatRupiah(tx.totalAmount)}
+                            </span>
+                          </div>
+                          <p className="text-xs md:text-sm text-gray-500 truncate">
+                            {formatDate(tx.completedAt || tx.createdAt)} • {tx.items?.length || 0} item
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => toggleCollapse(tx.id)}
+                          className="ml-2 p-2 hover:bg-gray-100 rounded-lg"
+                        >
+                          {collapsedIds.has(tx.id) ? (
+                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                          ) : (
+                            <Minus className="w-5 h-5 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
 
-                  {/* Kepo guess if exists */}
-                  {tx.kepoGuess && (
-                    <div className="mt-4 p-3 bg-orange-50 rounded-lg">
-                      <p className="text-sm text-orange-700">
-                        <span className="font-medium">🗣️ Kepo Warung:</span> "{tx.kepoGuess}"
-                      </p>
+                      {/* Items - Default Expanded */}
+                      {!collapsedIds.has(tx.id) && (
+                        <div className="border-t px-3 md:px-4 py-3 bg-gray-50">
+                          <div className="space-y-2">
+                            {tx.items?.map((item) => (
+                              <div key={item.id} className="flex justify-between text-sm">
+                                <span className="text-gray-700 flex-1 min-w-0 truncate">
+                                  {item.product?.name || 'Unknown'}
+                                </span>
+                                <span className="text-gray-600 ml-2 whitespace-nowrap">
+                                  x{item.quantity}
+                                </span>
+                                <span className="font-medium text-gray-800 ml-3 whitespace-nowrap">
+                                  {formatRupiah(item.unitPrice * item.quantity)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Kepo guess */}
+                          {tx.kepoGuess && (
+                            <div className="mt-3 p-2 bg-orange-50 rounded-lg">
+                              <p className="text-xs md:text-sm text-orange-700">
+                                <span className="font-medium">🗣️ Kepo:</span> "{(() => {
+                                  try {
+                                    const parsed = JSON.parse(tx.kepoGuess);
+                                    return parsed.sentence || tx.kepoGuess;
+                                  } catch {
+                                    return tx.kepoGuess;
+                                  }
+                                })()}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
-          ))}
+          ) : null}
+
+          {/* Pembelian Group */}
+          {!filters.type || filters.type === 'IN' ? (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                  <ArrowDownCircle className="w-5 h-5" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Pembelian ({groupedTransactions.IN.length})
+                </h2>
+              </div>
+
+              {groupedTransactions.IN.length === 0 ? (
+                <p className="text-gray-500 text-sm ml-11">Belum ada transaksi pembelian</p>
+              ) : (
+                <div className="space-y-2 ml-0 md:ml-11">
+                  {groupedTransactions.IN.map((tx) => (
+                    <div key={tx.id} className="bg-white rounded-lg shadow-sm border">
+                      {/* Transaction Header */}
+                      <div className="p-3 md:p-4 flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-base md:text-lg text-gray-800">
+                              {formatRupiah(tx.totalAmount)}
+                            </span>
+                          </div>
+                          <p className="text-xs md:text-sm text-gray-500 truncate">
+                            {formatDate(tx.completedAt || tx.createdAt)} • {tx.items?.length || 0} item
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => toggleCollapse(tx.id)}
+                          className="ml-2 p-2 hover:bg-gray-100 rounded-lg"
+                        >
+                          {collapsedIds.has(tx.id) ? (
+                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                          ) : (
+                            <Minus className="w-5 h-5 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Items - Default Expanded */}
+                      {!collapsedIds.has(tx.id) && (
+                        <div className="border-t px-3 md:px-4 py-3 bg-gray-50">
+                          <div className="space-y-2">
+                            {tx.items?.map((item) => (
+                              <div key={item.id} className="flex justify-between text-sm">
+                                <span className="text-gray-700 flex-1 min-w-0 truncate">
+                                  {item.product?.name || 'Unknown'}
+                                </span>
+                                <span className="text-gray-600 ml-2 whitespace-nowrap">
+                                  x{item.quantity}
+                                </span>
+                                <span className="font-medium text-gray-800 ml-3 whitespace-nowrap">
+                                  {formatRupiah(item.unitPrice * item.quantity)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
 

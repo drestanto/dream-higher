@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import {
   Home,
@@ -7,6 +8,8 @@ import {
   Package,
   PlusCircle,
   BarChart3,
+  Menu,
+  X,
 } from 'lucide-react';
 
 const navItems = [
@@ -24,10 +27,38 @@ const navItems = [
 ];
 
 export default function Layout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const closeSidebar = () => setIsSidebarOpen(false);
+
   return (
     <div className="flex h-screen bg-gray-100">
+      {/* Mobile hamburger button */}
+      <button
+        onClick={toggleSidebar}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg"
+      >
+        {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={closeSidebar}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-lg flex flex-col">
+      <aside
+        className={`
+          fixed lg:static inset-y-0 left-0 z-40
+          w-64 bg-white shadow-lg flex flex-col
+          transform transition-transform duration-300 ease-in-out
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
         {/* Logo */}
         <div className="p-4 border-b">
           <div className="flex items-center gap-2">
@@ -55,6 +86,7 @@ export default function Layout() {
                 <li key={item.to}>
                   <NavLink
                     to={item.to}
+                    onClick={closeSidebar}
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${colors.base} ${
                         isActive ? `${colors.active} font-medium` : 'hover:opacity-80'
@@ -80,7 +112,9 @@ export default function Layout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <Outlet />
+        <div className="lg:p-0 pt-16 lg:pt-0">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

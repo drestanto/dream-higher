@@ -70,7 +70,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create transaction
+// Create transaction (always starts as PENDING, completed when user finishes)
 router.post('/', async (req, res) => {
   try {
     const { type } = req.body; // IN or OUT

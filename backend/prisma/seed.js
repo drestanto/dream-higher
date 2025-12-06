@@ -80,27 +80,87 @@ async function main() {
 
   console.log(`Seeded ${products.length} products`);
 
-  // Create some sample transactions
-  const sampleProducts = await prisma.product.findMany({ take: 5 });
+  // Get all products for transaction generation
+  const allProducts = await prisma.product.findMany();
 
-  // Sample completed transaction
-  const tx1 = await prisma.transaction.create({
-    data: {
-      type: 'OUT',
-      status: 'COMPLETED',
-      totalAmount: sampleProducts.slice(0, 3).reduce((sum, p) => sum + p.sellPrice, 0),
-      completedAt: new Date(),
-      items: {
-        create: sampleProducts.slice(0, 3).map((p) => ({
-          productId: p.id,
-          quantity: 1,
-          unitPrice: p.sellPrice,
-        })),
-      },
-    },
-  });
+  // Helper to get random items from array
+  const getRandomItems = (arr, count) => {
+    const shuffled = [...arr].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+  };
 
-  console.log('Created sample transaction:', tx1.id);
+  // Helper to get random int between min and max
+  const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  // Generate transactions for last 14 days
+  const now = new Date();
+  let transactionCount = 0;
+
+  for (let daysAgo = 13; daysAgo >= 0; daysAgo--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - daysAgo);
+    date.setHours(randomInt(8, 20), randomInt(0, 59), 0, 0); // Random time between 8 AM - 8 PM
+
+    // Create 2-5 OUT (sales) transactions per day
+    const outCount = randomInt(2, 5);
+    for (let i = 0; i < outCount; i++) {
+      const txDate = new Date(date);
+      txDate.setMinutes(txDate.getMinutes() + i * randomInt(30, 120)); // Space out transactions
+
+      const selectedProducts = getRandomItems(allProducts, randomInt(1, 5));
+      const items = selectedProducts.map((p) => ({
+        productId: p.id,
+        quantity: randomInt(1, 3),
+        unitPrice: p.sellPrice,
+      }));
+
+      const totalAmount = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+
+      await prisma.transaction.create({
+        data: {
+          type: 'OUT',
+          status: 'COMPLETED',
+          totalAmount,
+          completedAt: txDate,
+          createdAt: txDate,
+          items: { create: items },
+        },
+      });
+
+      transactionCount++;
+    }
+
+    // Create 0-2 IN (purchases) transactions per day
+    const inCount = randomInt(0, 2);
+    for (let i = 0; i < inCount; i++) {
+      const txDate = new Date(date);
+      txDate.setHours(randomInt(9, 17), randomInt(0, 59), 0, 0);
+
+      const selectedProducts = getRandomItems(allProducts, randomInt(3, 8));
+      const items = selectedProducts.map((p) => ({
+        productId: p.id,
+        quantity: randomInt(5, 20),
+        unitPrice: p.buyPrice,
+      }));
+
+      const totalAmount = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+
+      await prisma.transaction.create({
+        data: {
+          type: 'IN',
+          status: 'COMPLETED',
+          totalAmount,
+          completedAt: txDate,
+          createdAt: txDate,
+          items: { create: items },
+        },
+      });
+
+      transactionCount++;
+    }
+  }
+
+  console.log(`Created ${transactionCount} sample transactions over 14 days`);
   console.log('Seeding complete!');
 }
 
