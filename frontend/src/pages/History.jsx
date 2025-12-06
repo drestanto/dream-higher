@@ -78,7 +78,7 @@ export default function History() {
   };
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="h-full overflow-auto p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>

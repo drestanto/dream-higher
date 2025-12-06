@@ -71,15 +71,15 @@ export default function TransactionPanel({ onComplete, onCancel }) {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b bg-gray-50">
+      <div className="p-3 lg:p-4 border-b bg-gray-50 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-gray-800">
+            <h3 className="font-semibold text-gray-800 text-sm lg:text-base">
               {currentTransaction.type === 'OUT' ? 'Customer Beli' : 'Beli ke Vendor'}
             </h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs lg:text-sm text-gray-500">
               {items.length} item
             </p>
           </div>
@@ -96,7 +96,7 @@ export default function TransactionPanel({ onComplete, onCancel }) {
       </div>
 
       {/* Items list */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-3 lg:p-4">
         {items.length === 0 ? (
           <div className="text-center text-gray-400 py-8">
             <p>Belum ada item</p>
@@ -165,31 +165,31 @@ export default function TransactionPanel({ onComplete, onCancel }) {
       </div>
 
       {/* Footer with total and actions */}
-      <div className="border-t bg-white p-4">
+      <div className="border-t bg-white p-3 lg:p-4 flex-shrink-0">
         {/* Total */}
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-lg font-medium text-gray-600">Total</span>
-          <span className="text-2xl font-bold text-gray-800">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-base lg:text-lg font-medium text-gray-600">Total</span>
+          <span className="text-xl lg:text-2xl font-bold text-gray-800">
             {formatRupiah(currentTransaction.totalAmount)}
           </span>
         </div>
 
         {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 lg:gap-3">
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center justify-center gap-1.5 lg:gap-2 px-3 lg:px-4 py-2.5 lg:py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 text-sm lg:text-base"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 lg:w-5 lg:h-5" />
             <span>Batal</span>
           </button>
           <button
             onClick={onComplete}
             disabled={isLoading || items.length === 0}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-1.5 lg:gap-2 px-3 lg:px-4 py-2.5 lg:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
           >
-            <Check className="w-5 h-5" />
+            <Check className="w-4 h-4 lg:w-5 lg:h-5" />
             <span>{isLoading ? 'Memproses...' : 'Selesai'}</span>
           </button>
         </div>

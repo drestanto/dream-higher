@@ -225,10 +225,13 @@ export default function ScanPage() {
   // Handle manual product click
   const handleProductClick = async (product) => {
     try {
-      if (!currentTransaction) {
-        await createTransaction(transactionType);
+      // Ensure transaction exists
+      let transaction = currentTransaction;
+      if (!transaction) {
+        transaction = await createTransaction(transactionType);
       }
 
+      // Add item using barcode
       await addItemByBarcode(product.barcode);
 
       // Play success sound
@@ -239,9 +242,10 @@ export default function ScanPage() {
       setTimeout(() => setScanFeedback(null), 1500);
     } catch (error) {
       beep('error');
+      console.error('Manual product click error:', error);
       setScanFeedback({
         type: 'error',
-        message: error.response?.data?.error || 'Gagal menambahkan produk',
+        message: error.response?.data?.error || error.message || 'Gagal menambahkan produk',
       });
       setTimeout(() => setScanFeedback(null), 2000);
     }
@@ -396,19 +400,19 @@ export default function ScanPage() {
   }
 
   return (
-    <div className="h-full flex">
-      {/* Scanner Panel (Left/Center) */}
-      <div className="flex-1 p-6 flex flex-col">
+    <div className="h-full flex flex-col lg:flex-row overflow-hidden">
+      {/* Scanner Panel (Left/Center) - 2/3 height on mobile */}
+      <div className="h-[66.67%] lg:h-full lg:flex-1 p-4 lg:p-6 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <ScanLine className="w-7 h-7" />
+        <div className="mb-4 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <ScanLine className="w-6 h-6 lg:w-7 lg:h-7" />
               {transactionType === 'OUT' ? 'Customer Beli' : 'Beli ke Vendor'}
             </h1>
 
             {/* Mode Toggle */}
-            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 self-start sm:self-auto">
               <button
                 onClick={() => setScanMode('barcode')}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -582,9 +586,15 @@ export default function ScanPage() {
         </div>
       </div>
 
-      {/* Transaction Panel (Right) */}
-      <div className="w-96 bg-white border-l shadow-lg">
-        <TransactionPanel onComplete={handleComplete} onCancel={handleCancel} />
+      {/* Transaction Panel (Right) - Mobile: 1/3 height with drag handle */}
+      <div className="h-[33.33%] lg:h-screen lg:max-h-screen lg:w-96 border-t lg:border-t-0 lg:border-l shadow-lg flex-shrink-0 flex flex-col overflow-hidden relative">
+        {/* Drag handle for mobile */}
+        <div className="lg:hidden flex items-center justify-center py-2 border-b border-gray-200 cursor-grab active:cursor-grabbing flex-shrink-0">
+          <div className="w-12 h-1 bg-gray-400 rounded-full"></div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <TransactionPanel onComplete={handleComplete} onCancel={handleCancel} />
+        </div>
       </div>
 
     </div>

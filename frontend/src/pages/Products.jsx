@@ -61,7 +61,7 @@ export default function Products() {
   }
 
   return (
-    <div className="p-6">
+    <div className="h-full overflow-auto p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

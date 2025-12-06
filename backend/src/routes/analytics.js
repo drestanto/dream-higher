@@ -65,7 +65,7 @@ router.get('/summary', async (req, res) => {
   }
 });
 
-// Get revenue over time
+// Get revenue over time (includes purchases and profit)
 router.get('/revenue', async (req, res) => {
   try {
     const { from, to, groupBy = 'day' } = req.query;
@@ -76,19 +76,35 @@ router.get('/revenue', async (req, res) => {
     const transactions = await prisma.transaction.findMany({
       where: {
         status: 'COMPLETED',
-        type: 'OUT',
         completedAt: {
           gte: startDate,
           lte: endDate,
         },
       },
+      include: {
+        items: { include: { product: true } },
+      },
     });
 
     // Group by date
-    const revenueByDate = {};
+    const dataByDate = {};
     for (const t of transactions) {
       const date = t.completedAt.toISOString().slice(0, 10);
-      revenueByDate[date] = (revenueByDate[date] || 0) + t.totalAmount;
+      if (!dataByDate[date]) {
+        dataByDate[date] = { revenue: 0, purchases: 0, cost: 0, count: 0 };
+      }
+
+      dataByDate[date].count += 1;
+
+      if (t.type === 'OUT') {
+        dataByDate[date].revenue += t.totalAmount;
+        // Calculate cost of goods sold
+        for (const item of t.items) {
+          dataByDate[date].cost += item.product.buyPrice * item.quantity;
+        }
+      } else if (t.type === 'IN') {
+        dataByDate[date].purchases += t.totalAmount;
+      }
     }
 
     // Fill in missing dates
@@ -96,9 +112,14 @@ router.get('/revenue', async (req, res) => {
     const currentDate = new Date(startDate);
     while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().slice(0, 10);
+      const data = dataByDate[dateStr] || { revenue: 0, purchases: 0, cost: 0, count: 0 };
       result.push({
         date: dateStr,
-        revenue: revenueByDate[dateStr] || 0,
+        revenue: data.revenue,
+        purchases: data.purchases,
+        profit: data.revenue - data.cost,
+        cost: data.cost,
+        transactionCount: data.count,
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }

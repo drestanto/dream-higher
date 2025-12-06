@@ -59,13 +59,12 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [summaryRes, revenueRes, topRes, catRes, lowRes, weeklyRes] = await Promise.all([
-        api.get('/analytics/summary?period=today'),
+      const [summaryRes, revenueRes, topRes, catRes, lowRes] = await Promise.all([
+        api.get('/analytics/summary?period=week'),
         api.get('/analytics/revenue'),
         api.get('/analytics/top-products?limit=5'),
         api.get('/analytics/categories'),
         api.get('/analytics/low-stock'),
-        api.get('/analytics/summary?period=week'),
       ]);
 
       setSummary(summaryRes.data);
@@ -73,7 +72,7 @@ export default function Dashboard() {
       setTopProducts(topRes.data);
       setCategories(catRes.data);
       setLowStock(lowRes.data);
-      setWeeklyData(weeklyRes.data);
+      setWeeklyData(summaryRes.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -149,11 +148,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="h-full overflow-auto p-6 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <p className="text-gray-500">Ringkasan aktivitas warung hari ini</p>
+        <p className="text-gray-500">Ringkasan aktivitas warung 7 hari terakhir</p>
       </div>
 
       {/* Stats Cards - Clickable */}
@@ -164,11 +163,11 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Penjualan Hari Ini</p>
+              <p className="text-sm text-gray-500">Penjualan 7 Hari</p>
               <p className="text-2xl font-bold text-gray-800">
                 {formatRupiah(summary?.totalSales || 0)}
               </p>
-              <p className="text-xs text-gray-400 mt-1">Klik untuk detail 7 hari</p>
+              <p className="text-xs text-gray-400 mt-1">Klik untuk detail harian</p>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
               <TrendingUp className="w-6 h-6 text-green-600" />
@@ -182,11 +181,11 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Pembelian Stok</p>
+              <p className="text-sm text-gray-500">Pembelian Stok 7 Hari</p>
               <p className="text-2xl font-bold text-gray-800">
                 {formatRupiah(summary?.totalPurchases || 0)}
               </p>
-              <p className="text-xs text-gray-400 mt-1">Klik untuk detail 7 hari</p>
+              <p className="text-xs text-gray-400 mt-1">Klik untuk detail harian</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-lg">
               <ShoppingCart className="w-6 h-6 text-blue-600" />
@@ -200,11 +199,11 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Profit Bersih</p>
+              <p className="text-sm text-gray-500">Profit Bersih 7 Hari</p>
               <p className="text-2xl font-bold text-gray-800">
                 {formatRupiah(summary?.netProfit || 0)}
               </p>
-              <p className="text-xs text-gray-400 mt-1">Klik untuk detail 7 hari</p>
+              <p className="text-xs text-gray-400 mt-1">Klik untuk detail harian</p>
             </div>
             <div className="p-3 bg-purple-100 rounded-lg">
               <DollarSign className="w-6 h-6 text-purple-600" />
@@ -212,13 +211,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
+        <div
+          onClick={() => handleCardClick('transactions')}
+          className="bg-white rounded-xl shadow-sm p-5 border cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Transaksi</p>
+              <p className="text-sm text-gray-500">Total Transaksi 7 Hari</p>
               <p className="text-2xl font-bold text-gray-800">
                 {summary?.transactionCount || 0}
               </p>
+              <p className="text-xs text-gray-400 mt-1">Klik untuk detail harian</p>
             </div>
             <div className="p-3 bg-orange-100 rounded-lg">
               <Package className="w-6 h-6 text-orange-600" />
@@ -229,17 +232,22 @@ export default function Dashboard() {
 
       {/* Modal for 7-day breakdown */}
       {expandedCard && weeklyData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={closeModal}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closeModal}>
+          {/* Blur backdrop */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+          {/* Modal content */}
+          <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800">
                 {expandedCard === 'sales' && 'Penjualan 7 Hari Terakhir'}
                 {expandedCard === 'purchases' && 'Pembelian 7 Hari Terakhir'}
                 {expandedCard === 'profit' && 'Profit 7 Hari Terakhir'}
+                {expandedCard === 'transactions' && 'Transaksi 7 Hari Terakhir'}
               </h3>
               <button
                 onClick={closeModal}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -254,6 +262,7 @@ export default function Dashboard() {
                   {expandedCard === 'sales' && formatRupiah(weeklyData?.totalSales || 0)}
                   {expandedCard === 'purchases' && formatRupiah(weeklyData?.totalPurchases || 0)}
                   {expandedCard === 'profit' && formatRupiah(weeklyData?.netProfit || 0)}
+                  {expandedCard === 'transactions' && `${weeklyData?.transactionCount || 0} transaksi`}
                 </p>
               </div>
 
@@ -271,6 +280,7 @@ export default function Dashboard() {
                           {expandedCard === 'sales' && formatRupiah(day.revenue || 0)}
                           {expandedCard === 'purchases' && formatRupiah(day.purchases || 0)}
                           {expandedCard === 'profit' && formatRupiah(day.profit || 0)}
+                          {expandedCard === 'transactions' && `${day.transactionCount || 0} tx`}
                         </span>
                       </div>
                     );
@@ -282,7 +292,8 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-500">
                   {expandedCard === 'sales' && `Total ${weeklyData?.salesCount || 0} transaksi penjualan`}
                   {expandedCard === 'purchases' && `Total ${weeklyData?.purchaseCount || 0} transaksi pembelian`}
-                  {expandedCard === 'profit' && `Dari ${weeklyData?.salesCount || 0} transaksi penjualan`}
+                  {expandedCard === 'profit' && `${weeklyData?.salesCount || 0} transaksi penjualan, ${weeklyData?.purchaseCount || 0} transaksi pembelian`}
+                  {expandedCard === 'transactions' && `${weeklyData?.salesCount || 0} penjualan, ${weeklyData?.purchaseCount || 0} pembelian`}
                 </p>
               </div>
             </div>

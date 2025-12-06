@@ -48,31 +48,110 @@ export default function ReceiptPage() {
   }, [id]);
 
   const handleDownloadPDF = async () => {
-    if (!receiptRef.current) return;
-
     setIsGeneratingPDF(true);
     try {
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [80, canvas.height * 0.264583], // 80mm width (thermal receipt size)
+        format: [80, 200], // Thermal receipt size
       });
 
-      const imgWidth = 80;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let y = 10;
+      const pageWidth = 80;
+      const margin = 5;
+      const contentWidth = pageWidth - (margin * 2);
 
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      // Header
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(receipt.shopName, pageWidth / 2, y, { align: 'center' });
+      y += 5;
+
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(receipt.address, pageWidth / 2, y, { align: 'center' });
+      y += 6;
+
+      // Dashed line
+      pdf.setLineDash([1, 1]);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 5;
+
+      // Info
+      pdf.setFontSize(8);
+      pdf.text(`Tanggal: ${formatDate(receipt.date)}`, margin, y);
+      y += 4;
+      pdf.text(`No: ${receipt.receiptNumber}`, margin, y);
+      y += 4;
+      pdf.text(`Tipe: ${receipt.type === 'OUT' ? 'Penjualan' : 'Pembelian'}`, margin, y);
+      y += 6;
+
+      // Dashed line
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 5;
+
+      // Items header
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.text('Item', margin, y);
+      pdf.text('Harga', margin + 30, y);
+      pdf.text('Qty', margin + 48, y);
+      pdf.text('Total', pageWidth - margin, y, { align: 'right' });
+      y += 4;
+
+      // Items
+      pdf.setFont('helvetica', 'normal');
+      receipt.items.forEach((item) => {
+        // Item name (wrap if too long)
+        const itemName = item.name.length > 15 ? item.name.substring(0, 15) : item.name;
+        pdf.text(itemName, margin, y);
+        pdf.text(formatRupiah(item.unitPrice), margin + 30, y);
+        pdf.text(`x${item.quantity}`, margin + 48, y);
+        pdf.text(formatRupiah(item.total), pageWidth - margin, y, { align: 'right' });
+        y += 5;
+      });
+
+      y += 2;
+
+      // Dashed line
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 5;
+
+      // Total
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text('TOTAL', margin, y);
+      pdf.text(`Rp ${formatRupiah(receipt.total)}`, pageWidth - margin, y, { align: 'right' });
+      y += 7;
+
+      // Kepo sentence
+      if (receipt.kepoSentence) {
+        pdf.setLineDash([1, 1]);
+        pdf.rect(margin, y, contentWidth, 12);
+        y += 4;
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(7);
+        pdf.text('Warung Kepo:', pageWidth / 2, y, { align: 'center' });
+        y += 4;
+        const kepoLines = pdf.splitTextToSize(`"${receipt.kepoSentence}"`, contentWidth - 4);
+        pdf.text(kepoLines, pageWidth / 2, y, { align: 'center' });
+        y += kepoLines.length * 3 + 3;
+      }
+
+      // Footer
+      pdf.setLineDash([1, 1]);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 4;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.text('Terima Kasih!', pageWidth / 2, y, { align: 'center' });
+      y += 4;
+      pdf.text('Powered by Dream Higher', pageWidth / 2, y, { align: 'center' });
+
       pdf.save(`struk-${receipt.receiptNumber}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Gagal membuat PDF. Silakan coba lagi.');
+      alert('Gagal membuat PDF: ' + error.message);
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -134,38 +213,38 @@ export default function ReceiptPage() {
 
       {/* Receipt */}
       <div ref={receiptRef} className="receipt-print max-w-sm mx-auto bg-white shadow-lg print:shadow-none">
-        <div className="p-6 font-mono text-sm">
+        <div className="p-4 font-mono text-sm">
           {/* Header */}
-          <div className="text-center border-b border-dashed pb-4 mb-4">
-            <h2 className="font-bold text-xl">{receipt.shopName}</h2>
-            <p className="text-gray-600 text-xs mt-1">{receipt.address}</p>
+          <div className="text-center border-b border-dashed pb-2 mb-2">
+            <h2 className="font-bold text-lg leading-tight">{receipt.shopName}</h2>
+            <p className="text-gray-600 text-xs mt-0.5 leading-tight">{receipt.address}</p>
           </div>
 
           {/* Info */}
-          <div className="mb-4 text-xs space-y-1">
+          <div className="mb-2 text-xs space-y-0.5 leading-tight">
             <p>Tanggal: {formatDate(receipt.date)}</p>
             <p>No: {receipt.receiptNumber}</p>
             <p>Tipe: {receipt.type === 'OUT' ? 'Penjualan' : 'Pembelian'}</p>
           </div>
 
           {/* Items */}
-          <div className="border-t border-b border-dashed py-4 mb-4">
+          <div className="border-t border-b border-dashed py-2 mb-2">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left pb-2">Item</th>
-                  <th className="text-right pb-2">Harga</th>
-                  <th className="text-center pb-2">Qty</th>
-                  <th className="text-right pb-2">Total</th>
+                  <th className="text-left pb-1">Item</th>
+                  <th className="text-right pb-1">Harga</th>
+                  <th className="text-center pb-1">Qty</th>
+                  <th className="text-right pb-1">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {receipt.items.map((item, index) => (
                   <tr key={index} className="border-b border-dotted">
-                    <td className="py-2 pr-2">{item.name}</td>
-                    <td className="py-2 text-right">{formatRupiah(item.unitPrice)}</td>
-                    <td className="py-2 text-center">×{item.quantity}</td>
-                    <td className="py-2 text-right">{formatRupiah(item.total)}</td>
+                    <td className="py-1 pr-2 leading-tight">{item.name}</td>
+                    <td className="py-1 text-right leading-tight">{formatRupiah(item.unitPrice)}</td>
+                    <td className="py-1 text-center leading-tight">×{item.quantity}</td>
+                    <td className="py-1 text-right leading-tight">{formatRupiah(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -173,23 +252,23 @@ export default function ReceiptPage() {
           </div>
 
           {/* Total */}
-          <div className="flex justify-between items-center font-bold text-lg mb-4">
+          <div className="flex justify-between items-center font-bold text-base mb-2 leading-tight">
             <span>TOTAL</span>
             <span>Rp {formatRupiah(receipt.total)}</span>
           </div>
 
           {/* Kepo Warung Comment */}
           {receipt.kepoSentence && (
-            <div className="border border-dashed rounded-lg p-3 mb-4 bg-gray-50">
-              <p className="text-xs text-center text-gray-500 mb-1">💬 Warung Kepo:</p>
-              <p className="text-xs text-center italic text-gray-700">"{receipt.kepoSentence}"</p>
+            <div className="border border-dashed rounded-lg p-2 mb-2 bg-gray-50">
+              <p className="text-xs text-center text-gray-500 mb-0.5 leading-tight">💬 Warung Kepo:</p>
+              <p className="text-xs text-center italic text-gray-700 leading-tight">"{receipt.kepoSentence}"</p>
             </div>
           )}
 
           {/* Footer */}
-          <div className="text-center text-xs text-gray-500 border-t border-dashed pt-4">
+          <div className="text-center text-xs text-gray-500 border-t border-dashed pt-2 leading-tight">
             <p>Terima Kasih!</p>
-            <p className="mt-1">Powered by Dream Higher</p>
+            <p className="mt-0.5">Powered by Dream Higher</p>
           </div>
         </div>
       </div>
