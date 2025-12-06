@@ -86,14 +86,22 @@ RULES:
     const rawResponse = response.data.choices?.[0]?.message?.content?.trim();
     console.log('Kepo raw response:', rawResponse);
 
-    // Parse JSON response
+    // Parse JSON response - handle markdown code blocks
     try {
-      const parsed = JSON.parse(rawResponse);
+      let jsonStr = rawResponse;
+
+      // Extract JSON from markdown code block if present
+      const codeBlockMatch = rawResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim();
+      }
+
+      const parsed = JSON.parse(jsonStr);
       if (parsed.sentence && parsed.tts) {
         return parsed;
       }
     } catch (parseError) {
-      console.error('Failed to parse kepo JSON, using fallback');
+      console.error('Failed to parse kepo JSON:', parseError.message);
     }
 
     // Fallback if parsing fails
