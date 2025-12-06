@@ -178,6 +178,13 @@ export default function ScanPage() {
               setLocalKepoAudioUrl(kepoRes.data.kepoAudioUrl);
               // Update receipt with kepo sentence
               setReceipt(prev => ({ ...prev, kepoSentence: kepoRes.data.kepoSentence }));
+
+              // Auto-play audio if available
+              if (kepoRes.data.kepoAudioUrl) {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                const audio = new Audio(`${apiUrl}${kepoRes.data.kepoAudioUrl}`);
+                audio.play().catch(e => console.warn('Audio autoplay failed:', e));
+              }
             }
           } catch (kepoError) {
             console.error('Error generating kepo:', kepoError);
