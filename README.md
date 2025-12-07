@@ -9,7 +9,7 @@ Warung Kepo membantu warung & UMKM mencatat transaksi dengan cepat lewat **barco
 # 🎬 Short Demo (GIF)
 
 > *Keren mantap nih*
-![DEMO](DEMO.gif)
+![DEMO](demo.gif)
 
 ---
 
