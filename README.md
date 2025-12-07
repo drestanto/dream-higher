@@ -9,7 +9,7 @@ Warung Kepo membantu warung & UMKM mencatat transaksi dengan cepat lewat **barco
 # 🎬 Short Demo (GIF)
 
 > *Keren mantap nih*
-> `[COMING SOON: LINK GIF]`
+![DEMO](DEMO.gif)
 
 ---
 
@@ -166,4 +166,4 @@ Proyek ini tidak akan jalan tanpa dukungan dari:
 
 Semua dokumentasi ada di sini: **README ini** \
 (Ga usah buka Notion, Google Docs, atau kitab kuning.) \
-Kecuali lu mau lebih detil, bisa buka [dokumen teknis](./TECHNICAL_README.md)
+Kecuali lu mau lebih detil, bisa buka [dokumen teknis](TECHNICAL_README.md)
