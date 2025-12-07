@@ -47,6 +47,7 @@ coverage/
 # Markdown files (except README.md)
 *.md
 !README.md
+!TECHNICAL_README.md
 
 # sample barcode file
 *.png
